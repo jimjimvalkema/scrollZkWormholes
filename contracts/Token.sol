@@ -21,11 +21,15 @@ error VerificationFailed();
 contract Token is ERC20, Ownable, ERC20Permit {
     address public verifier;
 
-    constructor(address _verifier)
+    constructor()
         ERC20("token", "tkn")
         Ownable(msg.sender)
         ERC20Permit("token")
     {
+    }
+
+    function setVerifier(address _verifier) public onlyOwner {
+        require(verifier == address(0x0000000000000000000000000000000000000000), "verifier is already set silly");
         verifier = _verifier;
     }
 

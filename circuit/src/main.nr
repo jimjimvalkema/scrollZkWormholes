@@ -8,6 +8,10 @@ global MAX_HASH_PATH_SIZE = 248; //this is the max tree depth in scroll: https:/
 global MAX_RLP_SIZE = 1000; //should be enough scroll mainnet wasn't going above 621, my guess is 673 bytes max + rlp over head. idk what overhead is tho.
 // TODO actually find out what the largest value could be 
 
+global PADDED_CONTRACT_ADDRESS = [41,216,1,175,73,240,216,139,106,240,31,74,27,209,24,70,240,201,102,114,0,0,0,0,0,0,0,0,0,0,0,0];
+global BALANCES_SLOT = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+
+
 
 struct Storage_proof_data {
     hash_paths: Hash_paths_state_proof<MAX_HASH_PATH_SIZE,MAX_HASH_PATH_SIZE>,
