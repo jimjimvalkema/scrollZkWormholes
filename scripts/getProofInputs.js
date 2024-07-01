@@ -93,6 +93,88 @@ real_hash_path_len = "${hashPaths.storage.hashPath.length}"`
 
 }
 
+export async function getProofData() {
+    const secret = 123
+    const burnAddress = ethers.hexlify(ethers.toBeArray(poseidon1([123])).slice(0,20))
+    console.log({burnAddress})
+    const remintAddress = "0x794464c8c91A2bE4aDdAbfdB82b6db7B1Bb1DBC7"
+ 
+
+    //scroll
+    const PROVIDERURL = "https://scroll-sepolia.drpc.org"
+    const provider = new ethers.JsonRpcProvider(PROVIDERURL)
+    const blockNumber =  5093419//await provider.getBlockNumber("latest")
+
+    //Token
+    const contractAddress = "0x29d801Af49F0D88b6aF01F4A1BD11846f0c96672"
+
+    const tokenContract = new ethers.Contract(contractAddress, abi, provider)
+
+    const burnedTokenBalance = await tokenContract.balanceOf(burnAddress)
+    //slot pos for balances of weth contract
+    const mappingSlot = "0x00"
+    //get possition of mapping value keccak(lookUpAddress, mappingPosition ) 
+    const storageKey = createStoragePositionMapping(burnAddress, "address", mappingSlot)
+    const proof = await getProof(contractAddress, storageKey, blockNumber, provider)
+   
+    
+    const hashPaths = {
+        "account": getHashPathFromProof(proof.accountProof),
+        "storage": getHashPathFromProof(proof.storageProof[0].proof)
+    }
+
+
+    const  block  =await provider.getBlock(blockNumber)
+    const contractBalance = await provider.getBalance(contractAddress)
+    return {block, remintAddress, secret,burnedTokenBalance, contractBalance , hashPaths, provider, burnAddress}
+}
+
+/**
+ * 
+ * @param {ethers.HexString} input 
+ * @param {Number} bytes 
+ * @returns 
+ */
+function splitBytes(input, len) {
+    const regEx = new RegExp(`.{1,${2*len}}`, "g")
+    return input.slice(2).match(regEx).map((x)=>"0x"+x)
+
+}
+
+export async function getProofInputsObj(block, remintAddress, secret,burnedTokenBalance, contractBalance , hashPaths, provider) {
+    const split = (bytes)=>splitBytes(bytes,1);
+
+    const headerRlp = await getBlockHeaderRlp(Number(block.number), provider)
+    return {
+        storage_proof_data: {
+            hash_paths: {
+                account_proof: {
+                    hash_path: paddArray(hashPaths.account.hashPath, MAX_HASH_PATH_SIZE,  ethers.zeroPadBytes("0x00",32), false).map((x) => split(x)),
+                    leaf_type:  split(ethers.toBeHex(hashPaths.account.leafNode.type)),
+                    node_types: paddArray(hashPaths.account.nodeTypes, MAX_HASH_PATH_SIZE, 0, false),
+                    real_hash_path_len:  split(ethers.toBeHex(hashPaths.account.hashPath.length)),
+                    hash_path_bools: paddArray(hashPaths.account.leafNode.hashPathBools.slice(0, hashPaths.account.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false, false),
+                },
+                storage_proof: {
+                    hash_path: paddArray(hashPaths.storage.hashPath, MAX_HASH_PATH_SIZE, ethers.zeroPadBytes("0x00",32), false).map((x) => split(x)),
+                    leaf_type:  split(ethers.toBeHex(hashPaths.storage.leafNode.type)),
+                    node_types: paddArray(hashPaths.storage.nodeTypes, MAX_HASH_PATH_SIZE, 0, false),
+                    real_hash_path_len: split(ethers.toBeHex(hashPaths.storage.hashPath.length)),
+                    hash_path_bools: paddArray(hashPaths.storage.leafNode.hashPathBools.slice(0, hashPaths.storage.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false, false),
+
+                },
+            },
+            contract_balance: split(ethers.toBeHex(contractBalance)),
+            header_rlp: [...ethers.toBeArray(ethers.zeroPadBytes(headerRlp, MAX_RLP_SIZE))].map((x) => ethers.toBeHex(x)),
+            header_rlp_len: ethers.toBeArray(headerRlp).length,
+            nonce_codesize_0: split(hashPaths.account.leafNode.valuePreimage[0]),
+        },
+        secret: split(ethers.toBeHex(secret)),
+        remint_address: split(remintAddress),
+        user_balance: asPaddedArray(burnedTokenBalance, 32).map((x) => ethers.toBeHex(x)),
+        block_hash: [...ethers.toBeArray(block.hash)].map((x) => ethers.toBeHex(x))
+    }
+}
 
 async function formatTest(block, remintAddress, secret,burnedTokenBalance, contractBalance , hashPaths, provider) {
     const headerRlp = await getBlockHeaderRlp(Number(block.number), provider)
@@ -138,39 +220,41 @@ async function formatTest(block, remintAddress, secret,burnedTokenBalance, contr
 
 
 async function main() {
-    const secret = 123
-    const burnAddress = ethers.hexlify(ethers.toBeArray(poseidon1([123])).slice(0,20))
-    console.log({burnAddress})
-    const remintAddress = "0x794464c8c91A2bE4aDdAbfdB82b6db7B1Bb1DBC7"
+    // const secret = 123
+    // const burnAddress = ethers.hexlify(ethers.toBeArray(poseidon1([123])).slice(0,20))
+    // console.log({burnAddress})
+    // const remintAddress = "0x794464c8c91A2bE4aDdAbfdB82b6db7B1Bb1DBC7"
  
 
-    //scroll
-    const PROVIDERURL = "https://scroll-sepolia.drpc.org"
-    const provider = new ethers.JsonRpcProvider(PROVIDERURL)
-    const blockNumber =  5093419//await provider.getBlockNumber("latest")
+    // //scroll
+    // const PROVIDERURL = "https://scroll-sepolia.drpc.org"
+    // const provider = new ethers.JsonRpcProvider(PROVIDERURL)
+    // const blockNumber =  5093419//await provider.getBlockNumber("latest")
 
-    //Token
-    const contractAddress = "0x29d801Af49F0D88b6aF01F4A1BD11846f0c96672"
+    // //Token
+    // const contractAddress = "0x29d801Af49F0D88b6aF01F4A1BD11846f0c96672"
 
-    const tokenContract = new ethers.Contract(contractAddress, abi, provider)
+    // const tokenContract = new ethers.Contract(contractAddress, abi, provider)
 
-    const burnedTokenBalance = await tokenContract.balanceOf(burnAddress)
-    //slot pos for balances of weth contract
-    const mappingSlot = "0x00"
-    //get possition of mapping value keccak(lookUpAddress, mappingPosition ) 
-    const storageKey = createStoragePositionMapping(burnAddress, "address", mappingSlot)
-    const proof = await getProof(contractAddress, storageKey, blockNumber, provider)
-    await Bun.write('zkwormholesExample/scripts/out/proof.json', JSON.stringify(proof,null,2))
+    // const burnedTokenBalance = await tokenContract.balanceOf(burnAddress)
+    // //slot pos for balances of weth contract
+    // const mappingSlot = "0x00"
+    // //get possition of mapping value keccak(lookUpAddress, mappingPosition ) 
+    // const storageKey = createStoragePositionMapping(burnAddress, "address", mappingSlot)
+    // const proof = await getProof(contractAddress, storageKey, blockNumber, provider)
+    // await Bun.write('zkwormholesExample/scripts/out/proof.json', JSON.stringify(proof,null,2))
     
-    const hashPaths = {
-        "account": getHashPathFromProof(proof.accountProof),
-        "storage": getHashPathFromProof(proof.storageProof[0].proof)
-    }
+    // const hashPaths = {
+    //     "account": getHashPathFromProof(proof.accountProof),
+    //     "storage": getHashPathFromProof(proof.storageProof[0].proof)
+    // }
 
 
-    const  block  =await provider.getBlock(blockNumber)
-    const contractBalance = await provider.getBalance(contractAddress)
-    const toml = await formatToTomlProver(block, remintAddress,secret,burnedTokenBalance, contractBalance, hashPaths, provider)
+    // const  block  =await provider.getBlock(blockNumber)
+    // const contractBalance = await provider.getBalance(contractAddress)
+    const {block, remintAddress, secret,burnedTokenBalance, contractBalance , hashPaths, provider, burnAddress} = await getProofData()
+    const blockNumber = block.number
+    const toml = await formatToTomlProver(block, remintAddress,secret,burnedTokenBalance, contractBalance, hashPaths, provider, burnAddress)
     await Bun.write('zkwormholesExample/scripts/out/unformattedProofInputs.json',JSON.stringify({secret, burnAddress, blockNumber, hashPaths},null,2))
 
     await Bun.write('zkwormholesExample/circuit/Prover.toml', toml)
