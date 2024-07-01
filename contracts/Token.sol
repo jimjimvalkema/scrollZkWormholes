@@ -19,7 +19,9 @@ interface IVerifier {
 error VerificationFailed();
 
 contract Token is ERC20, Ownable, ERC20Permit {
-    address public verifier;
+    // smolverifier doesnt go down the full 248 depth of the tree but is able to run witn noir js (and is faster)
+    address public smolVerifier;
+    address public fullVerifier;
 
     constructor()
         ERC20("token", "tkn")
@@ -28,9 +30,11 @@ contract Token is ERC20, Ownable, ERC20Permit {
     {
     }
 
-    function setVerifier(address _verifier) public onlyOwner {
-        require(verifier == address(0x0000000000000000000000000000000000000000), "verifier is already set silly");
-        verifier = _verifier;
+    function setVerifiers(address _fullVerifier, address _smolVerifier) public onlyOwner {
+        require(smolVerifier == address(0x0000000000000000000000000000000000000000), "verifier is already set silly");
+        require(fullVerifier == address(0x0000000000000000000000000000000000000000), "verifier is already set silly");
+        fullVerifier = _fullVerifier;
+        smolVerifier = _smolVerifier
     }
 
     // WARNING anyone can mint

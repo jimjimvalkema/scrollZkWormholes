@@ -5,7 +5,7 @@ Using storage proofs to track the balances of the burn addresses (bassically com
 
 compile and proof with js (from root repo)
 ```shell
-cd zkwormholesExample/circuit/; nargo compile; cd ../..;  node zkwormholesExample/scripts/proof.js 
+cd zkwormholesExample/circuits/smolProver; nargo compile; cd ../../..;  node zkwormholesExample/scripts/proof.js
 ```
 populate prover.tom (terminal out put prints test for main.nr)
 ```shell

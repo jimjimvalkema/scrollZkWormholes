@@ -7,8 +7,10 @@ import {getHashPathFromProof} from "../../scripts/decodeScrollProof.js"
 import {createStoragePositionMapping, getBlockHeaderRlp} from "../../scripts/getScrollProof.js"
 import { ZkTrieNode, NodeTypes, leafTypes } from "../../scripts/types/ZkTrieNode.js";
 
-const MAX_HASH_PATH_SIZE = 54;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
-const MAX_RLP_SIZE = 650//1000; //should be enough scroll mainnet wasn't going above 621, my guess is 673 bytes max + rlp over head. idk what overhead is tho.
+const PROVER_TOML = 'zkwormholesExample/circuits/smolProver/Prover.toml'
+
+const MAX_HASH_PATH_SIZE = 248;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
+const MAX_RLP_SIZE = 850//1000; //should be enough scroll mainnet wasn't going above 621, my guess is 673 bytes max + rlp over head. idk what overhead is tho.
 // TODO actually find out what the largest value could be 
 
 const abi = [
@@ -228,7 +230,7 @@ async function main() {
         const toml = await formatToTomlProver(block, remintAddress,secret,burnedTokenBalance, contractBalance, hashPaths, provider, burnAddress)
         await Bun.write('zkwormholesExample/scripts/out/unformattedProofInputs.json',JSON.stringify({secret, burnAddress, blockNumber, hashPaths},null,2))
     
-        await Bun.write('zkwormholesExample/circuit/Prover.toml', toml)
+        await Bun.write(PROVER_TOML, toml)
         console.log({blockHash:block.hash, stateroot: block.stateRoot})
         console.log(await formatTest(block, remintAddress,secret,burnedTokenBalance, contractBalance, hashPaths, provider))
         
