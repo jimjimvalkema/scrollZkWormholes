@@ -7,7 +7,7 @@ import {getHashPathFromProof} from "../../scripts/decodeScrollProof.js"
 import {createStoragePositionMapping, getBlockHeaderRlp} from "../../scripts/getScrollProof.js"
 import { ZkTrieNode, NodeTypes, leafTypes } from "../../scripts/types/ZkTrieNode.js";
 
-const MAX_HASH_PATH_SIZE = 50;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
+const MAX_HASH_PATH_SIZE = 54;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
 const MAX_RLP_SIZE = 650//1000; //should be enough scroll mainnet wasn't going above 621, my guess is 673 bytes max + rlp over head. idk what overhead is tho.
 // TODO actually find out what the largest value could be 
 
