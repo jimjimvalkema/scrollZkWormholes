@@ -78,15 +78,18 @@ nonce_codesize_0 = "${hashPaths.account.leafNode.valuePreimage[0]}"
 hash_path = [${paddArray(hashPaths.account.hashPath, MAX_HASH_PATH_SIZE, 0,false).map((x)=>`"${x}"`)}]
 leaf_type = "${hashPaths.account.leafNode.type}"
 node_types = [${paddArray(hashPaths.account.nodeTypes, MAX_HASH_PATH_SIZE, 0,false).map((x)=>`"${x}"`)}]
-real_hash_path_len = "${hashPaths.account.hashPath.length}"
-hash_path_bools = [${paddArray(hashPaths.account.leafNode.hashPathBools.slice(0,hashPaths.account.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, 0,false).map((x)=>`"${Number(x)}"`)}]
-
+real_hash_path_len = "${hashPaths.account.hashPath.length}"` 
++
+// `\nhash_path_bools = [${paddArray(hashPaths.account.leafNode.hashPathBools.slice(0,hashPaths.account.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, 0,false).map((x)=>`"${Number(x)}"`)}]`
+// +
+`\n
 [storage_proof_data.hash_paths.storage_proof]
 hash_path = [${paddArray(hashPaths.storage.hashPath, MAX_HASH_PATH_SIZE, 0,false).map((x)=>`"${x}"`)}]
 leaf_type = "${hashPaths.storage.leafNode.type}"
 node_types = [${paddArray(hashPaths.storage.nodeTypes, MAX_HASH_PATH_SIZE,  0,false).map((x)=>`"${x}"`)}]
-real_hash_path_len = "${hashPaths.storage.hashPath.length}"
-hash_path_bools =  [${paddArray(hashPaths.storage.leafNode.hashPathBools.slice(0,hashPaths.storage.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, 0,false).map((x)=>`"${Number(x)}"`)}]`
+real_hash_path_len = "${hashPaths.storage.hashPath.length}"`
+// +
+// `\nhash_path_bools =  [${paddArray(hashPaths.storage.leafNode.hashPathBools.slice(0,hashPaths.storage.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, 0,false).map((x)=>`"${Number(x)}"`)}]`
 
 }
 
@@ -100,16 +103,23 @@ async function formatTest(block, remintAddress, secret,burnedTokenBalance, contr
                 hash_path:  [${paddArray(hashPaths.account.hashPath, MAX_HASH_PATH_SIZE, 0,false)}],
                 leaf_type: ${hashPaths.account.leafNode.type},
                 node_types: [${paddArray(hashPaths.account.nodeTypes, MAX_HASH_PATH_SIZE, 0,false)}],
-                real_hash_path_len: ${hashPaths.account.hashPath.length},
-                hash_path_bools: [${paddArray(hashPaths.account.leafNode.hashPathBools.slice(0,hashPaths.account.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, 0,false).map((x)=>`${x}`)}]
+                real_hash_path_len: ${hashPaths.account.hashPath.length},`
+                +
+                // `
+                // hash_path_bools: [${paddArray(hashPaths.account.leafNode.hashPathBools.slice(0,hashPaths.account.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, 0,false).map((x)=>`${x}`)}]`
+                // +
+                `
             },
             storage_proof: Hash_path_proof {
-                hash_path: [${paddArray(hashPaths.storage.hashPath, MAX_HASH_PATH_SIZE, 0,false)}],
+                hash_path: [${paddArray(hashPaths.storage.hashPath, MAX_HASH_PATH_SIZE, false,false)}],
                 leaf_type: ${hashPaths.storage.leafNode.type},
-                node_types: [${paddArray(hashPaths.storage.nodeTypes, MAX_HASH_PATH_SIZE,  0,false)}],
-                real_hash_path_len: ${hashPaths.storage.hashPath.length},
-                hash_path_bools: [${paddArray(hashPaths.storage.leafNode.hashPathBools.slice(0,hashPaths.storage.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, 0,false).map((x)=>`${x}`)}]
-
+                node_types: [${paddArray(hashPaths.storage.nodeTypes, MAX_HASH_PATH_SIZE,  false,false)}],
+                real_hash_path_len: ${hashPaths.storage.hashPath.length},`
+                +
+                // `
+                // hash_path_bools: [${paddArray(hashPaths.storage.leafNode.hashPathBools.slice(0,hashPaths.storage.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, 0,false).map((x)=>`${x}`)}]`
+                // +
+                `
             },
         },
             contract_balance: ${contractBalance},
