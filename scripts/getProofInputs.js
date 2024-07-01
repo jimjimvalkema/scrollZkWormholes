@@ -7,7 +7,7 @@ import {getHashPathFromProof} from "../../scripts/decodeScrollProof.js"
 import {createStoragePositionMapping, getBlockHeaderRlp} from "../../scripts/getScrollProof.js"
 import { ZkTrieNode, NodeTypes, leafTypes } from "../../scripts/types/ZkTrieNode.js";
 
-const MAX_HASH_PATH_SIZE = 40;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
+const MAX_HASH_PATH_SIZE = 50;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
 const MAX_RLP_SIZE = 650//1000; //should be enough scroll mainnet wasn't going above 621, my guess is 673 bytes max + rlp over head. idk what overhead is tho.
 // TODO actually find out what the largest value could be 
 
@@ -82,16 +82,16 @@ leaf_type = "${hashPaths.account.leafNode.type}"
 node_types = [${paddArray(hashPaths.account.nodeTypes, MAX_HASH_PATH_SIZE, 0,false).map((x)=>`"${x}"`)}]
 real_hash_path_len = "${hashPaths.account.hashPath.length}"` 
 +
-// `\nhash_path_bools = [${paddArray(hashPaths.account.leafNode.hashPathBools.slice(0,hashPaths.account.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, 0,false).map((x)=>`"${Number(x)}"`)}]`
-// +
+`\nhash_path_bools = [${paddArray(hashPaths.account.leafNode.hashPathBools.slice(0,hashPaths.account.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, 0,false).map((x)=>`"${Number(x)}"`)}]`
++
 `\n
 [storage_proof_data.hash_paths.storage_proof]
 hash_path = [${paddArray(hashPaths.storage.hashPath, MAX_HASH_PATH_SIZE, 0,false).map((x)=>`"${x}"`)}]
 leaf_type = "${hashPaths.storage.leafNode.type}"
 node_types = [${paddArray(hashPaths.storage.nodeTypes, MAX_HASH_PATH_SIZE,  0,false).map((x)=>`"${x}"`)}]
 real_hash_path_len = "${hashPaths.storage.hashPath.length}"`
-// +
-// `\nhash_path_bools =  [${paddArray(hashPaths.storage.leafNode.hashPathBools.slice(0,hashPaths.storage.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false,false).map((x)=>`"${Number(x)}"`)}]`
++
+`\nhash_path_bools =  [${paddArray(hashPaths.storage.leafNode.hashPathBools.slice(0,hashPaths.storage.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false,false).map((x)=>`"${Number(x)}"`)}]`
 
 }
 
@@ -155,14 +155,14 @@ export async function getProofInputsObj(block, remintAddress, secret,burnedToken
                     leaf_type:  (ethers.toBeHex(hashPaths.account.leafNode.type)),
                     node_types: paddArray(hashPaths.account.nodeTypes, MAX_HASH_PATH_SIZE, 0, false),
                     real_hash_path_len:  (ethers.toBeHex(hashPaths.account.hashPath.length)),
-                    //hash_path_bools: paddArray(hashPaths.account.leafNode.hashPathBools.slice(0, hashPaths.account.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false, false),
+                    hash_path_bools: paddArray(hashPaths.account.leafNode.hashPathBools.slice(0, hashPaths.account.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false, false),
                 },
                 storage_proof: {
                     hash_path: paddArray(hashPaths.storage.hashPath, MAX_HASH_PATH_SIZE, ethers.zeroPadBytes("0x00",32), false).map((x) => (x)),
                     leaf_type:  (ethers.toBeHex(hashPaths.storage.leafNode.type)),
                     node_types: paddArray(hashPaths.storage.nodeTypes, MAX_HASH_PATH_SIZE, 0, false),
                     real_hash_path_len: (ethers.toBeHex(hashPaths.storage.hashPath.length)),
-                    //hash_path_bools: paddArray(hashPaths.storage.leafNode.hashPathBools.slice(0, hashPaths.storage.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false, false),
+                    hash_path_bools: paddArray(hashPaths.storage.leafNode.hashPathBools.slice(0, hashPaths.storage.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false, false),
 
                 },
             },
@@ -189,9 +189,9 @@ async function formatTest(block, remintAddress, secret,burnedTokenBalance, contr
                 node_types: [${paddArray(hashPaths.account.nodeTypes, MAX_HASH_PATH_SIZE, 0,false)}],
                 real_hash_path_len: ${hashPaths.account.hashPath.length},`
                 +
-                // `
-                // hash_path_bools: [${paddArray(hashPaths.account.leafNode.hashPathBools.slice(0,hashPaths.account.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false,false).map((x)=>`${x}`)}]`
-                // +
+                `
+                hash_path_bools: [${paddArray(hashPaths.account.leafNode.hashPathBools.slice(0,hashPaths.account.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false,false).map((x)=>`${x}`)}]`
+                +
                 `
             },
             storage_proof: Hash_path_proof {
@@ -200,9 +200,9 @@ async function formatTest(block, remintAddress, secret,burnedTokenBalance, contr
                 node_types: [${paddArray(hashPaths.storage.nodeTypes, MAX_HASH_PATH_SIZE,  0,false)}],
                 real_hash_path_len: ${hashPaths.storage.hashPath.length},`
                 +
-                // `
-                // hash_path_bools: [${paddArray(hashPaths.storage.leafNode.hashPathBools.slice(0,hashPaths.storage.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false,false).map((x)=>`${x}`)}]`
-                // +
+                `
+                hash_path_bools: [${paddArray(hashPaths.storage.leafNode.hashPathBools.slice(0,hashPaths.storage.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false,false).map((x)=>`${x}`)}]`
+                +
                 `
             },
         },

@@ -1,12 +1,11 @@
-use dep::ScrollStorageProver::{storage_proof_on_mapping_node_key,poseidon2_domain, get_state_root, split_byte32_to_fields};
+use dep::ScrollStorageProver::{storage_proof_on_mapping,poseidon2_domain, get_state_root, split_byte32_to_fields};
 use dep::ScrollStorageProver::{Hash_path_proof,Hash_paths_state_proof, Account_preimage_excl_storage};
 use dep::std::field::bytes32_to_field;
 use dep::std::hash::poseidon;
 use dep::std::hash::keccak256;
 
 // 50 is the highest value that still run in noirjs wasm
-// cant even do 50 with  node_key.to_be_bits(248)
-global MAX_HASH_PATH_SIZE = 40;//248;//32; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
+global MAX_HASH_PATH_SIZE = 50;//248;//32; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
 global MAX_RLP_SIZE = 650;//1000; //should be enough scroll mainnet wasn't going above 621, my guess is 673 bytes max + rlp over head. idk what overhead is tho.
 // TODO actually find out what the largest value could be 
 
@@ -58,7 +57,7 @@ fn main(
     let burn_address:[u8;32] = get_burn_address(secret);
 
     //------------ compute block hash ------------------
-    let state_root = storage_proof_on_mapping_node_key(burn_address, BALANCES_SLOT, user_balance, PADDED_CONTRACT_ADDRESS, storage_proof_data.hash_paths, account_preimage);
+    let state_root = storage_proof_on_mapping(burn_address, BALANCES_SLOT, user_balance, PADDED_CONTRACT_ADDRESS, storage_proof_data.hash_paths, account_preimage);
     let computed_block_hash:[u8;32] = keccak256(storage_proof_data.header_rlp,storage_proof_data.header_rlp_len);
     assert(computed_block_hash == block_hash, "given block hash doesnt match computed block hash");
 
@@ -67,38 +66,40 @@ fn main(
     assert(bytes32_to_field(state_root_rlp) == state_root, "computed state root from merkle proof doesnt match the one from the block header rlp");
 }
 
-// #[test]
-// fn test_main() {
-//     let storage_proof_data = Storage_proof_data {
-//         hash_paths :Hash_paths_state_proof{
-//                 account_proof: Hash_path_proof {
-//                 hash_path:  [0x21efa330f29f0f642a8a97babb7ed2cdf23ee7c4115dd300490bfb3db5d659d2,0x0000000000000000000000000000000000000000000000000000000000000000,0x2e497f3b91b2a47229ecf460af393f730575bb4fe8fdb94300fb5f4287016da5,0x107bb707849c8bd92c62a66680cba68b4c3670ec4d62fc1a4654cc170dde1865,0x1f58f2d515c77efd63ff64c8d4d0f85e3751be82b987089021fc4fbb81b37d0e,0x245a92e91dac81a6cdb9bad352fec744e51cac5b582e31b96abb719526242b3a,0x2ec2d3a1d39449e4f55dd3bc10c48bc4c4893eb921b088566420bd50e6c8346c,0x1f62cd39b9085d9b042f6da7d8b7a93c655ce430544f02c7243904218c6c88b9,0x22248dc28945d1c1c3cdd651cf9c6a72026d465eb4cd0d7b55a34876b9728dc1,0x20be66e6a1d7f02f92f094303707821698fdf53a4150f3b4603827e3f603b492,0x0d7f7170c69015eec16e8f7097dd64162435cd89ad63d3ef527b061f6107457d,0x0f0c128f698a3a771df495ed06fdbbc1ea81c3d056e5f5d60c4b6043ec875311,0x2757b0dd7752aeb98bf1198a992db6af010af409e17880f27a60c0ef8f1b0fbc,0x2f8b1c977c7e0ff65db565b3d328d28536120075ef122c99557b7756dc594bf8,0x2caff2be72461d8a91f2897c1ef8022853f5f32288efdd07871a4c3a9b156485,0x2ba579193606ffc73f1035e717a8ce5d53dec511911f5c2a3ac4f47830296fd0,0x1dd39d39a1e2da13a02b3fb42f94dde7c624554c61d1206cdfafbd5398318e7f,0x09a2f2d2c7066da14c1255993529a9bb60a2f34c3ae59184756239ef8d3e9570,0x0208c5df9c0b073e15d73c421247dc426aa56c70bd3a90bae40f05d75b707bf9,0x278a1c70fd02ed6794e35985786e952c875efb4618bcb29ebeed51ea50501491,0x2fcf5129c9297b6c9086927198455868b7345bec7720551c1716afcb77194437,0x0f8bc96394ef6506568d5046a401df594d1cd9514c693ea375584945feff7131,0x2053795f589f21856d86718ac346c276bd87a53911333796361f681810eae0ca,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-//                 leaf_type: 4,
-//                 node_types: [6,8,7,7,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-//                 real_hash_path_len: 23,
-//             },
-//             storage_proof: Hash_path_proof {
-//                 hash_path: [0x0e8efe508e4c35ed223855d12ff496ec44ad20dabe5f6667bb3e92b69fcf401d,0x1dd462a85da682b3fda645aae33e9c6e10c9032561f4d8057f3fdd9a0b360c20,0x2d6035efe3ca9e3e196d82c1dea217b92907d11b083d2c9441da1709af7f5833,0x2448eae4f763b7179317b74e3b854540319c580989187c47028d7d43138aa450,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-//                 leaf_type: 4,
-//                 node_types: [6,8,9,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-//                 real_hash_path_len: 4,
-//             },
-//         },
-//             contract_balance: 0,
-//             header_rlp:[249,2,96,160,178,105,194,222,20,70,239,31,80,22,136,163,43,99,94,87,107,74,23,204,210,229,108,185,178,121,194,139,209,224,60,47,160,29,204,77,232,222,199,93,122,171,133,181,103,182,204,212,26,211,18,69,27,148,138,116,19,240,161,66,253,64,212,147,71,148,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,160,3,99,71,251,66,230,248,171,53,146,118,124,107,66,168,83,245,211,95,83,80,124,194,119,7,203,151,57,168,230,207,135,160,3,114,181,86,60,161,44,163,189,43,5,120,173,96,176,168,1,195,157,233,135,204,99,107,129,48,159,176,162,186,145,122,160,5,107,35,251,186,72,6,150,182,95,229,165,155,143,33,72,161,41,145,3,196,245,125,248,57,35,58,242,207,76,162,210,185,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,131,77,184,43,131,152,150,128,130,82,8,132,102,129,234,82,184,97,216,131,5,4,8,132,103,101,116,104,136,103,111,49,46,50,49,46,49,133,108,105,110,117,120,0,0,0,0,0,0,0,196,8,53,192,180,110,50,252,10,81,35,124,145,57,234,153,6,247,127,55,238,83,159,75,141,100,124,23,144,16,232,119,22,30,202,53,29,175,87,163,1,97,157,227,110,157,207,136,137,227,211,214,228,120,135,96,197,235,16,43,28,72,187,176,0,160,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,136,0,0,0,0,0,0,0,0,132,10,30,154,124,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-//             header_rlp_len:611,
-//             nonce_codesize_0:0x0000000000000000000000000000000000000000000025610000000000000001,
-//         };
+#[test]
+fn test_main() {
+    let storage_proof_data = Storage_proof_data {
+        hash_paths :Hash_paths_state_proof{
+                account_proof: Hash_path_proof {
+                hash_path:  [0x21efa330f29f0f642a8a97babb7ed2cdf23ee7c4115dd300490bfb3db5d659d2,0x0000000000000000000000000000000000000000000000000000000000000000,0x2e497f3b91b2a47229ecf460af393f730575bb4fe8fdb94300fb5f4287016da5,0x107bb707849c8bd92c62a66680cba68b4c3670ec4d62fc1a4654cc170dde1865,0x1f58f2d515c77efd63ff64c8d4d0f85e3751be82b987089021fc4fbb81b37d0e,0x245a92e91dac81a6cdb9bad352fec744e51cac5b582e31b96abb719526242b3a,0x2ec2d3a1d39449e4f55dd3bc10c48bc4c4893eb921b088566420bd50e6c8346c,0x1f62cd39b9085d9b042f6da7d8b7a93c655ce430544f02c7243904218c6c88b9,0x22248dc28945d1c1c3cdd651cf9c6a72026d465eb4cd0d7b55a34876b9728dc1,0x20be66e6a1d7f02f92f094303707821698fdf53a4150f3b4603827e3f603b492,0x0d7f7170c69015eec16e8f7097dd64162435cd89ad63d3ef527b061f6107457d,0x0f0c128f698a3a771df495ed06fdbbc1ea81c3d056e5f5d60c4b6043ec875311,0x2757b0dd7752aeb98bf1198a992db6af010af409e17880f27a60c0ef8f1b0fbc,0x2f8b1c977c7e0ff65db565b3d328d28536120075ef122c99557b7756dc594bf8,0x2caff2be72461d8a91f2897c1ef8022853f5f32288efdd07871a4c3a9b156485,0x2ba579193606ffc73f1035e717a8ce5d53dec511911f5c2a3ac4f47830296fd0,0x1dd39d39a1e2da13a02b3fb42f94dde7c624554c61d1206cdfafbd5398318e7f,0x09a2f2d2c7066da14c1255993529a9bb60a2f34c3ae59184756239ef8d3e9570,0x0208c5df9c0b073e15d73c421247dc426aa56c70bd3a90bae40f05d75b707bf9,0x278a1c70fd02ed6794e35985786e952c875efb4618bcb29ebeed51ea50501491,0x2fcf5129c9297b6c9086927198455868b7345bec7720551c1716afcb77194437,0x0f8bc96394ef6506568d5046a401df594d1cd9514c693ea375584945feff7131,0x2053795f589f21856d86718ac346c276bd87a53911333796361f681810eae0ca,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                leaf_type: 4,
+                node_types: [6,8,7,7,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                real_hash_path_len: 23,
+                hash_path_bools: [false,false,true,true,true,true,true,true,true,true,false,true,false,false,true,true,true,true,true,false,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false]
+            },
+            storage_proof: Hash_path_proof {
+                hash_path: [0x0e8efe508e4c35ed223855d12ff496ec44ad20dabe5f6667bb3e92b69fcf401d,0x1dd462a85da682b3fda645aae33e9c6e10c9032561f4d8057f3fdd9a0b360c20,0x2d6035efe3ca9e3e196d82c1dea217b92907d11b083d2c9441da1709af7f5833,0x2448eae4f763b7179317b74e3b854540319c580989187c47028d7d43138aa450,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                leaf_type: 4,
+                node_types: [6,8,9,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                real_hash_path_len: 4,
+                hash_path_bools: [false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false]
+            },
+        },
+            contract_balance: 0,
+            header_rlp:[249,2,96,160,178,105,194,222,20,70,239,31,80,22,136,163,43,99,94,87,107,74,23,204,210,229,108,185,178,121,194,139,209,224,60,47,160,29,204,77,232,222,199,93,122,171,133,181,103,182,204,212,26,211,18,69,27,148,138,116,19,240,161,66,253,64,212,147,71,148,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,160,3,99,71,251,66,230,248,171,53,146,118,124,107,66,168,83,245,211,95,83,80,124,194,119,7,203,151,57,168,230,207,135,160,3,114,181,86,60,161,44,163,189,43,5,120,173,96,176,168,1,195,157,233,135,204,99,107,129,48,159,176,162,186,145,122,160,5,107,35,251,186,72,6,150,182,95,229,165,155,143,33,72,161,41,145,3,196,245,125,248,57,35,58,242,207,76,162,210,185,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,131,77,184,43,131,152,150,128,130,82,8,132,102,129,234,82,184,97,216,131,5,4,8,132,103,101,116,104,136,103,111,49,46,50,49,46,49,133,108,105,110,117,120,0,0,0,0,0,0,0,196,8,53,192,180,110,50,252,10,81,35,124,145,57,234,153,6,247,127,55,238,83,159,75,141,100,124,23,144,16,232,119,22,30,202,53,29,175,87,163,1,97,157,227,110,157,207,136,137,227,211,214,228,120,135,96,197,235,16,43,28,72,187,176,0,160,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,136,0,0,0,0,0,0,0,0,132,10,30,154,124,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+            header_rlp_len:611,
+            nonce_codesize_0:0x0000000000000000000000000000000000000000000025610000000000000001,
+        };
 
 
-//     let secret = 123;
+    let secret = 123;
 
-//     let remint_address = 0x794464c8c91A2bE4aDdAbfdB82b6db7B1Bb1DBC7;
-//     let user_balance = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13,224,182,179,167,100,0,0];
-//     let block_hash =  [63,207,103,16,101,22,138,20,184,64,7,67,249,123,140,167,106,0,242,36,204,196,252,207,200,32,144,240,85,117,208,172];
+    let remint_address = 0x794464c8c91A2bE4aDdAbfdB82b6db7B1Bb1DBC7;
+    let user_balance = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13,224,182,179,167,100,0,0];
+    let block_hash =  [63,207,103,16,101,22,138,20,184,64,7,67,249,123,140,167,106,0,242,36,204,196,252,207,200,32,144,240,85,117,208,172];
 
-//     main(remint_address,user_balance,block_hash,secret,storage_proof_data);
-// }
+    main(remint_address,user_balance,block_hash,secret,storage_proof_data);
+}
 
 // #[test]
 // fn test_storage_proof_on_mapping() {
