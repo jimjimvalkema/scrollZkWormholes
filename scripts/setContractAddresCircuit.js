@@ -13,6 +13,7 @@ async function setContract(contract="0x794464c8c91A2bE4aDdAbfdB82b6db7B1Bb1DBC7"
 
     for await (const line of file.readLines()) {
         if (line.startsWith("global PADDED_CONTRACT_ADDRESS")) {   
+            //TODO poseidon code hash compressed keccak code hash
             newFile += `global PADDED_CONTRACT_ADDRESS = [${paddedContractArr}];\n`
         } else {
             newFile+=line+"\n"

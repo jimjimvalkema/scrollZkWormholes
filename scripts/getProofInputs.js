@@ -1,4 +1,4 @@
-const { ethers } = require("ethers");
+const { ethers, N } = require("ethers");
 const { poseidon1 } = require("poseidon-lite");
 import * as fs from 'node:fs/promises';
 import {getHashPathFromProof} from "../../scripts/decodeScrollProof"
@@ -21,18 +21,18 @@ async function getProof(contractAddress, storageKey, blockNumber, provider) {
 
 function paddArray(arr,len=32,filler=0, infront=true) {
     if (infront) {
-        return [Array(len-arr.length).fill(0), ...arr]
+        return [...Array(len-arr.length).fill(0), ...arr]
 
     } else {
-        return [ ...arr, Array(len-arr.length).fill(0)]
+        return [ ...arr, ...Array(len-arr.length).fill(0)]
     }
     
 
 }
 
-function asPaddedArray(value, len=32) {
+function asPaddedArray(value, len=32, infront=true) {
     const valueArr = [...ethers.toBeArray(value)]
-    return paddArray(valueArr, len)
+    return paddArray(valueArr, len,0, infront)
 }
 
 /**
@@ -57,12 +57,13 @@ function asPaddedArray(value, len=32) {
  * @param {hashPaths} hashPaths 
  * @returns 
  */
-async function formatToTomlProver(block, remintAddress, secret,burnedTokenBalance, contractBalance , hashPaths) {
+async function formatToTomlProver(block, remintAddress, secret,burnedTokenBalance, contractBalance , hashPaths, provider) {
     const MAX_HASH_PATH_SIZE = 248; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
     const MAX_RLP_SIZE = 1000; //should be enough scroll mainnet wasn't going above 621, my guess is 673 bytes max + rlp over head. idk what overhead is tho.
     // TODO actually find out what the largest value could be 
-    
-    const headerRlp = await getBlockHeaderRlp(Number(block.number))
+    console.log("the blovk bumnerrrrrrrrrrrrrrrrr",block.number)
+    const headerRlp = await getBlockHeaderRlp(Number(block.number), provider)
+    console.log({headerRlp})
     return `block_hash = [${ethers.toBeArray(block.hash).toString()}] 
 remint_address = "${remintAddress}"
 secret = "${ethers.toBeHex(secret)}"
@@ -99,7 +100,7 @@ async function main() {
     //scroll
     const PROVIDERURL = "https://scroll-sepolia.drpc.org"
     const provider = new ethers.JsonRpcProvider(PROVIDERURL)
-    const blockNumber =  await provider.getBlockNumber("latest")
+    const blockNumber =  5093419//await provider.getBlockNumber("latest")
 
     //Token
     const contractAddress = "0x29d801Af49F0D88b6aF01F4A1BD11846f0c96672"
@@ -112,6 +113,7 @@ async function main() {
     //get possition of mapping value keccak(lookUpAddress, mappingPosition ) 
     const storageKey = createStoragePositionMapping(burnAddress, "address", mappingSlot)
     const proof = await getProof(contractAddress, storageKey, blockNumber, provider)
+    await Bun.write('zkwormholesExample/scripts/out/proof.json', JSON.stringify(proof,null,2))
     
     const hashPaths = {
         "account": getHashPathFromProof(proof.accountProof),
@@ -121,10 +123,11 @@ async function main() {
 
     const  block  =await provider.getBlock(blockNumber)
     const contractBalance = await provider.getBalance(contractAddress)
-    const toml = await formatToTomlProver(block, remintAddress,secret,burnedTokenBalance, contractBalance, hashPaths)
+    const toml = await formatToTomlProver(block, remintAddress,secret,burnedTokenBalance, contractBalance, hashPaths, provider)
     await Bun.write('zkwormholesExample/scripts/out/unformattedProofInputs.json',JSON.stringify({secret, burnAddress, blockNumber, hashPaths},null,2))
 
     await Bun.write('zkwormholesExample/circuit/Prover.toml', toml)
+    console.log({blockHash:block.hash, stateroot: block.stateRoot})
 }
 
 main()
