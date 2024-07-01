@@ -25,10 +25,10 @@ async function getProof(contractAddress, storageKey, blockNumber, provider) {
 
 function paddArray(arr,len=32,filler=0, infront=true) {
     if (infront) {
-        return [...Array(len-arr.length).fill(0), ...arr]
+        return [...Array(len-arr.length).fill(filler), ...arr]
 
     } else {
-        return [ ...arr, ...Array(len-arr.length).fill(0)]
+        return [ ...arr, ...Array(len-arr.length).fill(filler)]
     }
     
 
@@ -80,16 +80,16 @@ leaf_type = "${hashPaths.account.leafNode.type}"
 node_types = [${paddArray(hashPaths.account.nodeTypes, MAX_HASH_PATH_SIZE, 0,false).map((x)=>`"${x}"`)}]
 real_hash_path_len = "${hashPaths.account.hashPath.length}"` 
 +
-// `\nhash_path_bools = [${paddArray(hashPaths.account.leafNode.hashPathBools.slice(0,hashPaths.account.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, 0,false).map((x)=>`"${Number(x)}"`)}]`
-// +
+`\nhash_path_bools = [${paddArray(hashPaths.account.leafNode.hashPathBools.slice(0,hashPaths.account.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, 0,false).map((x)=>`"${Number(x)}"`)}]`
++
 `\n
 [storage_proof_data.hash_paths.storage_proof]
 hash_path = [${paddArray(hashPaths.storage.hashPath, MAX_HASH_PATH_SIZE, 0,false).map((x)=>`"${x}"`)}]
 leaf_type = "${hashPaths.storage.leafNode.type}"
 node_types = [${paddArray(hashPaths.storage.nodeTypes, MAX_HASH_PATH_SIZE,  0,false).map((x)=>`"${x}"`)}]
 real_hash_path_len = "${hashPaths.storage.hashPath.length}"`
-// +
-// `\nhash_path_bools =  [${paddArray(hashPaths.storage.leafNode.hashPathBools.slice(0,hashPaths.storage.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, 0,false).map((x)=>`"${Number(x)}"`)}]`
++
+`\nhash_path_bools =  [${paddArray(hashPaths.storage.leafNode.hashPathBools.slice(0,hashPaths.storage.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false,false).map((x)=>`"${Number(x)}"`)}]`
 
 }
 
@@ -105,20 +105,20 @@ async function formatTest(block, remintAddress, secret,burnedTokenBalance, contr
                 node_types: [${paddArray(hashPaths.account.nodeTypes, MAX_HASH_PATH_SIZE, 0,false)}],
                 real_hash_path_len: ${hashPaths.account.hashPath.length},`
                 +
-                // `
-                // hash_path_bools: [${paddArray(hashPaths.account.leafNode.hashPathBools.slice(0,hashPaths.account.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, 0,false).map((x)=>`${x}`)}]`
-                // +
+                `
+                hash_path_bools: [${paddArray(hashPaths.account.leafNode.hashPathBools.slice(0,hashPaths.account.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false,false).map((x)=>`${x}`)}]`
+                +
                 `
             },
             storage_proof: Hash_path_proof {
-                hash_path: [${paddArray(hashPaths.storage.hashPath, MAX_HASH_PATH_SIZE, false,false)}],
+                hash_path: [${paddArray(hashPaths.storage.hashPath, MAX_HASH_PATH_SIZE, 0,false)}],
                 leaf_type: ${hashPaths.storage.leafNode.type},
-                node_types: [${paddArray(hashPaths.storage.nodeTypes, MAX_HASH_PATH_SIZE,  false,false)}],
+                node_types: [${paddArray(hashPaths.storage.nodeTypes, MAX_HASH_PATH_SIZE,  0,false)}],
                 real_hash_path_len: ${hashPaths.storage.hashPath.length},`
                 +
-                // `
-                // hash_path_bools: [${paddArray(hashPaths.storage.leafNode.hashPathBools.slice(0,hashPaths.storage.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, 0,false).map((x)=>`${x}`)}]`
-                // +
+                `
+                hash_path_bools: [${paddArray(hashPaths.storage.leafNode.hashPathBools.slice(0,hashPaths.storage.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false,false).map((x)=>`${x}`)}]`
+                +
                 `
             },
         },
