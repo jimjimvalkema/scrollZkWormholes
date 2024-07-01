@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "name": "hardhat-project",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",

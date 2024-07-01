@@ -1,11 +1,13 @@
-const { ethers, N } = require("ethers");
-const { poseidon1 } = require("poseidon-lite");
+// const { ethers, N } = require("ethers");
+// const { poseidon1 } = require("poseidon-lite");
+import { poseidon1} from "poseidon-lite";
+import { ethers} from "ethers";
 import * as fs from 'node:fs/promises';
-import {getHashPathFromProof} from "../../scripts/decodeScrollProof"
-import {createStoragePositionMapping, getBlockHeaderRlp} from "../../scripts/getScrollProof"
+import {getHashPathFromProof} from "../../scripts/decodeScrollProof.js"
+import {createStoragePositionMapping, getBlockHeaderRlp} from "../../scripts/getScrollProof.js"
 import { ZkTrieNode, NodeTypes, leafTypes } from "../../scripts/types/ZkTrieNode.js";
 
-const MAX_HASH_PATH_SIZE = 248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
+const MAX_HASH_PATH_SIZE = 50;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
 const MAX_RLP_SIZE = 650//1000; //should be enough scroll mainnet wasn't going above 621, my guess is 673 bytes max + rlp over head. idk what overhead is tho.
 // TODO actually find out what the largest value could be 
 
@@ -135,42 +137,42 @@ export async function getProofData() {
  * @param {Number} bytes 
  * @returns 
  */
-function splitBytes(input, len) {
+function Bytes(input, len) {
     const regEx = new RegExp(`.{1,${2*len}}`, "g")
     return input.slice(2).match(regEx).map((x)=>"0x"+x)
 
 }
 
 export async function getProofInputsObj(block, remintAddress, secret,burnedTokenBalance, contractBalance , hashPaths, provider) {
-    const split = (bytes)=>splitBytes(bytes,1);
+    const split  = (bytes)=>Bytes(bytes,1);
 
     const headerRlp = await getBlockHeaderRlp(Number(block.number), provider)
     return {
         storage_proof_data: {
             hash_paths: {
                 account_proof: {
-                    hash_path: paddArray(hashPaths.account.hashPath, MAX_HASH_PATH_SIZE,  ethers.zeroPadBytes("0x00",32), false).map((x) => split(x)),
-                    leaf_type:  split(ethers.toBeHex(hashPaths.account.leafNode.type)),
+                    hash_path: paddArray(hashPaths.account.hashPath, MAX_HASH_PATH_SIZE,  ethers.zeroPadBytes("0x00",32), false).map((x) => (x)),
+                    leaf_type:  (ethers.toBeHex(hashPaths.account.leafNode.type)),
                     node_types: paddArray(hashPaths.account.nodeTypes, MAX_HASH_PATH_SIZE, 0, false),
-                    real_hash_path_len:  split(ethers.toBeHex(hashPaths.account.hashPath.length)),
+                    real_hash_path_len:  (ethers.toBeHex(hashPaths.account.hashPath.length)),
                     hash_path_bools: paddArray(hashPaths.account.leafNode.hashPathBools.slice(0, hashPaths.account.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false, false),
                 },
                 storage_proof: {
-                    hash_path: paddArray(hashPaths.storage.hashPath, MAX_HASH_PATH_SIZE, ethers.zeroPadBytes("0x00",32), false).map((x) => split(x)),
-                    leaf_type:  split(ethers.toBeHex(hashPaths.storage.leafNode.type)),
+                    hash_path: paddArray(hashPaths.storage.hashPath, MAX_HASH_PATH_SIZE, ethers.zeroPadBytes("0x00",32), false).map((x) => (x)),
+                    leaf_type:  (ethers.toBeHex(hashPaths.storage.leafNode.type)),
                     node_types: paddArray(hashPaths.storage.nodeTypes, MAX_HASH_PATH_SIZE, 0, false),
-                    real_hash_path_len: split(ethers.toBeHex(hashPaths.storage.hashPath.length)),
+                    real_hash_path_len: (ethers.toBeHex(hashPaths.storage.hashPath.length)),
                     hash_path_bools: paddArray(hashPaths.storage.leafNode.hashPathBools.slice(0, hashPaths.storage.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false, false),
 
                 },
             },
-            contract_balance: split(ethers.toBeHex(contractBalance)),
+            contract_balance: (ethers.toBeHex(contractBalance)),
             header_rlp: [...ethers.toBeArray(ethers.zeroPadBytes(headerRlp, MAX_RLP_SIZE))].map((x) => ethers.toBeHex(x)),
             header_rlp_len: ethers.toBeArray(headerRlp).length,
-            nonce_codesize_0: split(hashPaths.account.leafNode.valuePreimage[0]),
+            nonce_codesize_0: (hashPaths.account.leafNode.valuePreimage[0]),
         },
-        secret: split(ethers.toBeHex(secret)),
-        remint_address: split(remintAddress),
+        secret: (ethers.toBeHex(secret)),
+        remint_address: (remintAddress),
         user_balance: asPaddedArray(burnedTokenBalance, 32).map((x) => ethers.toBeHex(x)),
         block_hash: [...ethers.toBeArray(block.hash)].map((x) => ethers.toBeHex(x))
     }
@@ -220,46 +222,18 @@ async function formatTest(block, remintAddress, secret,burnedTokenBalance, contr
 
 
 async function main() {
-    // const secret = 123
-    // const burnAddress = ethers.hexlify(ethers.toBeArray(poseidon1([123])).slice(0,20))
-    // console.log({burnAddress})
-    // const remintAddress = "0x794464c8c91A2bE4aDdAbfdB82b6db7B1Bb1DBC7"
- 
-
-    // //scroll
-    // const PROVIDERURL = "https://scroll-sepolia.drpc.org"
-    // const provider = new ethers.JsonRpcProvider(PROVIDERURL)
-    // const blockNumber =  5093419//await provider.getBlockNumber("latest")
-
-    // //Token
-    // const contractAddress = "0x29d801Af49F0D88b6aF01F4A1BD11846f0c96672"
-
-    // const tokenContract = new ethers.Contract(contractAddress, abi, provider)
-
-    // const burnedTokenBalance = await tokenContract.balanceOf(burnAddress)
-    // //slot pos for balances of weth contract
-    // const mappingSlot = "0x00"
-    // //get possition of mapping value keccak(lookUpAddress, mappingPosition ) 
-    // const storageKey = createStoragePositionMapping(burnAddress, "address", mappingSlot)
-    // const proof = await getProof(contractAddress, storageKey, blockNumber, provider)
-    // await Bun.write('zkwormholesExample/scripts/out/proof.json', JSON.stringify(proof,null,2))
+    if (process.argv[2]) {
+        const {block, remintAddress, secret,burnedTokenBalance, contractBalance , hashPaths, provider, burnAddress} = await getProofData()
+        const blockNumber = block.number
+        const toml = await formatToTomlProver(block, remintAddress,secret,burnedTokenBalance, contractBalance, hashPaths, provider, burnAddress)
+        await Bun.write('zkwormholesExample/scripts/out/unformattedProofInputs.json',JSON.stringify({secret, burnAddress, blockNumber, hashPaths},null,2))
     
-    // const hashPaths = {
-    //     "account": getHashPathFromProof(proof.accountProof),
-    //     "storage": getHashPathFromProof(proof.storageProof[0].proof)
-    // }
+        await Bun.write('zkwormholesExample/circuit/Prover.toml', toml)
+        console.log({blockHash:block.hash, stateroot: block.stateRoot})
+        console.log(await formatTest(block, remintAddress,secret,burnedTokenBalance, contractBalance, hashPaths, provider))
+        
+    }
 
-
-    // const  block  =await provider.getBlock(blockNumber)
-    // const contractBalance = await provider.getBalance(contractAddress)
-    const {block, remintAddress, secret,burnedTokenBalance, contractBalance , hashPaths, provider, burnAddress} = await getProofData()
-    const blockNumber = block.number
-    const toml = await formatToTomlProver(block, remintAddress,secret,burnedTokenBalance, contractBalance, hashPaths, provider, burnAddress)
-    await Bun.write('zkwormholesExample/scripts/out/unformattedProofInputs.json',JSON.stringify({secret, burnAddress, blockNumber, hashPaths},null,2))
-
-    await Bun.write('zkwormholesExample/circuit/Prover.toml', toml)
-    console.log({blockHash:block.hash, stateroot: block.stateRoot})
-    console.log(await formatTest(block, remintAddress,secret,burnedTokenBalance, contractBalance, hashPaths, provider))
 }
 
 main()

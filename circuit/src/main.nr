@@ -4,13 +4,16 @@ use dep::std::field::bytes32_to_field;
 use dep::std::hash::poseidon;
 use dep::std::hash::keccak256;
 
-global MAX_HASH_PATH_SIZE = 248;//32; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
+// 50 is the highest value that still run in noirjs wasm
+global MAX_HASH_PATH_SIZE = 50;//248;//32; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
 global MAX_RLP_SIZE = 650;//1000; //should be enough scroll mainnet wasn't going above 621, my guess is 673 bytes max + rlp over head. idk what overhead is tho.
 // TODO actually find out what the largest value could be 
 
-global PADDED_CONTRACT_ADDRESS = [41,216,1,175,73,240,216,139,106,240,31,74,27,209,24,70,240,201,102,114,0,0,0,0,0,0,0,0,0,0,0,0];
-global BALANCES_SLOT = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
 
+global PADDED_CONTRACT_ADDRESS =  [41,216,1,175,73,240,216,139,106,240,31,74,27,209,24,70,240,201,102,114,0,0,0,0,0,0,0,0,0,0,0,0];
+global BALANCES_SLOT = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+global COMPRESSED_KECCAK_CODE_HASH = 0x0c59fff5ec409c445b9858a85da56b01dc4733d5125f8506b09fe66583ba88a3;
+global POSEIDON_CODE_HASH = 0x303b0320a219c11b2f0deeaee37defb3cd7443d0c45aaa1d4c4da46d48e8ff40;
 
 
 struct Storage_proof_data {
@@ -43,11 +46,9 @@ fn main(
     remint_address * 2;
 
     //-------------- constants--------------
-    let slot = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
-    let padded_contract = [41,216,1,175,73,240,216,139,106,240,31,74,27,209,24,70,240,201,102,114,0,0,0,0,0,0,0,0,0,0,0,0];   
     let account_preimage = Account_preimage_excl_storage { // = the whole account leaf preimage except storage hash since we need to compute it later here
-        compressed_keccak_code_hash:0x0c59fff5ec409c445b9858a85da56b01dc4733d5125f8506b09fe66583ba88a3, // cannot be change afaik unless maybe self destruct but that is silly
-        poseidon_code_hash:         0x303b0320a219c11b2f0deeaee37defb3cd7443d0c45aaa1d4c4da46d48e8ff40, // 
+        compressed_keccak_code_hash:COMPRESSED_KECCAK_CODE_HASH, // cannot be change afaik unless maybe self destruct but that is silly
+        poseidon_code_hash:         POSEIDON_CODE_HASH, // 
     
     //--------------- inputs ---------------
         nonce_codesize_0:           storage_proof_data.nonce_codesize_0, // only changes if the contract creates another contract: https://ethereum.org/en/developers/docs/accounts/#an-account-examined
@@ -56,7 +57,7 @@ fn main(
     let burn_address:[u8;32] = get_burn_address(secret);
 
     //------------ compute block hash ------------------
-    let state_root = storage_proof_on_mapping(burn_address, slot, user_balance, padded_contract, storage_proof_data.hash_paths, account_preimage);
+    let state_root = storage_proof_on_mapping(burn_address, BALANCES_SLOT, user_balance, PADDED_CONTRACT_ADDRESS, storage_proof_data.hash_paths, account_preimage);
     let computed_block_hash:[u8;32] = keccak256(storage_proof_data.header_rlp,storage_proof_data.header_rlp_len);
     assert(computed_block_hash == block_hash, "given block hash doesnt match computed block hash");
 
@@ -70,18 +71,18 @@ fn test_main() {
     let storage_proof_data = Storage_proof_data {
         hash_paths :Hash_paths_state_proof{
                 account_proof: Hash_path_proof {
-                hash_path:  [0x21efa330f29f0f642a8a97babb7ed2cdf23ee7c4115dd300490bfb3db5d659d2,0x0000000000000000000000000000000000000000000000000000000000000000,0x2e497f3b91b2a47229ecf460af393f730575bb4fe8fdb94300fb5f4287016da5,0x107bb707849c8bd92c62a66680cba68b4c3670ec4d62fc1a4654cc170dde1865,0x1f58f2d515c77efd63ff64c8d4d0f85e3751be82b987089021fc4fbb81b37d0e,0x245a92e91dac81a6cdb9bad352fec744e51cac5b582e31b96abb719526242b3a,0x2ec2d3a1d39449e4f55dd3bc10c48bc4c4893eb921b088566420bd50e6c8346c,0x1f62cd39b9085d9b042f6da7d8b7a93c655ce430544f02c7243904218c6c88b9,0x22248dc28945d1c1c3cdd651cf9c6a72026d465eb4cd0d7b55a34876b9728dc1,0x20be66e6a1d7f02f92f094303707821698fdf53a4150f3b4603827e3f603b492,0x0d7f7170c69015eec16e8f7097dd64162435cd89ad63d3ef527b061f6107457d,0x0f0c128f698a3a771df495ed06fdbbc1ea81c3d056e5f5d60c4b6043ec875311,0x2757b0dd7752aeb98bf1198a992db6af010af409e17880f27a60c0ef8f1b0fbc,0x2f8b1c977c7e0ff65db565b3d328d28536120075ef122c99557b7756dc594bf8,0x2caff2be72461d8a91f2897c1ef8022853f5f32288efdd07871a4c3a9b156485,0x2ba579193606ffc73f1035e717a8ce5d53dec511911f5c2a3ac4f47830296fd0,0x1dd39d39a1e2da13a02b3fb42f94dde7c624554c61d1206cdfafbd5398318e7f,0x09a2f2d2c7066da14c1255993529a9bb60a2f34c3ae59184756239ef8d3e9570,0x0208c5df9c0b073e15d73c421247dc426aa56c70bd3a90bae40f05d75b707bf9,0x278a1c70fd02ed6794e35985786e952c875efb4618bcb29ebeed51ea50501491,0x2fcf5129c9297b6c9086927198455868b7345bec7720551c1716afcb77194437,0x0f8bc96394ef6506568d5046a401df594d1cd9514c693ea375584945feff7131,0x2053795f589f21856d86718ac346c276bd87a53911333796361f681810eae0ca,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                hash_path:  [0x21efa330f29f0f642a8a97babb7ed2cdf23ee7c4115dd300490bfb3db5d659d2,0x0000000000000000000000000000000000000000000000000000000000000000,0x2e497f3b91b2a47229ecf460af393f730575bb4fe8fdb94300fb5f4287016da5,0x107bb707849c8bd92c62a66680cba68b4c3670ec4d62fc1a4654cc170dde1865,0x1f58f2d515c77efd63ff64c8d4d0f85e3751be82b987089021fc4fbb81b37d0e,0x245a92e91dac81a6cdb9bad352fec744e51cac5b582e31b96abb719526242b3a,0x2ec2d3a1d39449e4f55dd3bc10c48bc4c4893eb921b088566420bd50e6c8346c,0x1f62cd39b9085d9b042f6da7d8b7a93c655ce430544f02c7243904218c6c88b9,0x22248dc28945d1c1c3cdd651cf9c6a72026d465eb4cd0d7b55a34876b9728dc1,0x20be66e6a1d7f02f92f094303707821698fdf53a4150f3b4603827e3f603b492,0x0d7f7170c69015eec16e8f7097dd64162435cd89ad63d3ef527b061f6107457d,0x0f0c128f698a3a771df495ed06fdbbc1ea81c3d056e5f5d60c4b6043ec875311,0x2757b0dd7752aeb98bf1198a992db6af010af409e17880f27a60c0ef8f1b0fbc,0x2f8b1c977c7e0ff65db565b3d328d28536120075ef122c99557b7756dc594bf8,0x2caff2be72461d8a91f2897c1ef8022853f5f32288efdd07871a4c3a9b156485,0x2ba579193606ffc73f1035e717a8ce5d53dec511911f5c2a3ac4f47830296fd0,0x1dd39d39a1e2da13a02b3fb42f94dde7c624554c61d1206cdfafbd5398318e7f,0x09a2f2d2c7066da14c1255993529a9bb60a2f34c3ae59184756239ef8d3e9570,0x0208c5df9c0b073e15d73c421247dc426aa56c70bd3a90bae40f05d75b707bf9,0x278a1c70fd02ed6794e35985786e952c875efb4618bcb29ebeed51ea50501491,0x2fcf5129c9297b6c9086927198455868b7345bec7720551c1716afcb77194437,0x0f8bc96394ef6506568d5046a401df594d1cd9514c693ea375584945feff7131,0x2053795f589f21856d86718ac346c276bd87a53911333796361f681810eae0ca,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                 leaf_type: 4,
-                node_types: [6,8,7,7,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                node_types: [6,8,7,7,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                 real_hash_path_len: 23,
-                hash_path_bools: [false,false,true,true,true,true,true,true,true,true,false,true,false,false,true,true,true,true,true,false,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false]
+                hash_path_bools: [false,false,true,true,true,true,true,true,true,true,false,true,false,false,true,true,true,true,true,false,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false]
             },
             storage_proof: Hash_path_proof {
-                hash_path: [0x0e8efe508e4c35ed223855d12ff496ec44ad20dabe5f6667bb3e92b69fcf401d,0x1dd462a85da682b3fda645aae33e9c6e10c9032561f4d8057f3fdd9a0b360c20,0x2d6035efe3ca9e3e196d82c1dea217b92907d11b083d2c9441da1709af7f5833,0x2448eae4f763b7179317b74e3b854540319c580989187c47028d7d43138aa450,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                hash_path: [0x0e8efe508e4c35ed223855d12ff496ec44ad20dabe5f6667bb3e92b69fcf401d,0x1dd462a85da682b3fda645aae33e9c6e10c9032561f4d8057f3fdd9a0b360c20,0x2d6035efe3ca9e3e196d82c1dea217b92907d11b083d2c9441da1709af7f5833,0x2448eae4f763b7179317b74e3b854540319c580989187c47028d7d43138aa450,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                 leaf_type: 4,
-                node_types: [6,8,9,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                node_types: [6,8,9,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                 real_hash_path_len: 4,
-                hash_path_bools: [false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false]
+                hash_path_bools: [false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false]
             },
         },
             contract_balance: 0,

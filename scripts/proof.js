@@ -1,8 +1,8 @@
 import { BarretenbergBackend, BarretenbergVerifier as Verifier } from '@noir-lang/backend_barretenberg';
 import { Noir } from '@noir-lang/noir_js';
-import {getProofData, getProofInputsObj} from "./getProofInputs"
+import {getProofData, getProofInputsObj} from "./getProofInputs.js"
 
-import circuit from '../circuit/target/zkwormholesEIP7503.json';
+import circuit from '../circuit/target/zkwormholesEIP7503.json'  assert {type: 'json'};
 
 
 const backend = new BarretenbergBackend(circuit);
@@ -13,3 +13,5 @@ console.log(input)
 
 const proof = await noir.generateProof(input);
 console.log(proof)
+// idk its not stopping on its own prob wasm thing?
+process.exit();
