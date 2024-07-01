@@ -64,27 +64,27 @@ async function formatToTomlProver(block, remintAddress, secret,burnedTokenBalanc
     console.log("the blovk bumnerrrrrrrrrrrrrrrrr",block.number)
     const headerRlp = await getBlockHeaderRlp(Number(block.number), provider)
     console.log({headerRlp})
-    return `block_hash = [${ethers.toBeArray(block.hash).toString()}] 
+    return `block_hash = [${[...ethers.toBeArray(block.hash)].map((x)=>`"${x}"`)}] 
 remint_address = "${remintAddress}"
 secret = "${ethers.toBeHex(secret)}"
-user_balance =  [${asPaddedArray(burnedTokenBalance, 32).toString()}]
+user_balance =  [${asPaddedArray(burnedTokenBalance, 32).map((x)=>`"${x}"`)}]
 
 [storage_proof_data]
 contract_balance = "${contractBalance}"
-header_rlp =  [${ethers.toBeArray(ethers.zeroPadBytes(headerRlp,MAX_RLP_SIZE))}]
+header_rlp =  [${[...ethers.toBeArray(ethers.zeroPadBytes(headerRlp,MAX_RLP_SIZE))].map((x)=>`"${x}"`)}]
 header_rlp_len = "${ethers.toBeArray(headerRlp).length}"
 nonce_codesize_0 = "${hashPaths.account.leafNode.valuePreimage[0]}"
 
 [storage_proof_data.hash_paths.account_proof]
-hash_path = [${paddArray(hashPaths.account.hashPath, MAX_HASH_PATH_SIZE, 0,false)}]
+hash_path = [${paddArray(hashPaths.account.hashPath, MAX_HASH_PATH_SIZE, 0,false).map((x)=>`"${x}"`)}]
 leaf_type = "${hashPaths.account.leafNode.type}"
-node_types = [${paddArray(hashPaths.account.nodeTypes, MAX_HASH_PATH_SIZE, 0,false)}]
+node_types = [${paddArray(hashPaths.account.nodeTypes, MAX_HASH_PATH_SIZE, 0,false).map((x)=>`"${x}"`)}]
 real_hash_path_len = "${hashPaths.account.hashPath.length}"
 
 [storage_proof_data.hash_paths.storage_proof]
-hash_path = [${paddArray(hashPaths.storage.hashPath, MAX_HASH_PATH_SIZE, 0,false)}]
+hash_path = [${paddArray(hashPaths.storage.hashPath, MAX_HASH_PATH_SIZE, 0,false).map((x)=>`"${x}"`)}]
 leaf_type = "${hashPaths.storage.leafNode.type}"
-node_types = [${paddArray(hashPaths.storage.nodeTypes, MAX_HASH_PATH_SIZE,  0,false)}]
+node_types = [${paddArray(hashPaths.storage.nodeTypes, MAX_HASH_PATH_SIZE,  0,false).map((x)=>`"${x}"`)}]
 real_hash_path_len = "${hashPaths.storage.hashPath.length}"`
 
 }
