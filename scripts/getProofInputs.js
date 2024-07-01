@@ -5,6 +5,10 @@ import {getHashPathFromProof} from "../../scripts/decodeScrollProof"
 import {createStoragePositionMapping, getBlockHeaderRlp} from "../../scripts/getScrollProof"
 import { ZkTrieNode, NodeTypes, leafTypes } from "../../scripts/types/ZkTrieNode.js";
 
+const MAX_HASH_PATH_SIZE = 248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
+const MAX_RLP_SIZE = 650//1000; //should be enough scroll mainnet wasn't going above 621, my guess is 673 bytes max + rlp over head. idk what overhead is tho.
+// TODO actually find out what the largest value could be 
+
 const abi = [
     "function balanceOf(address) view returns (uint)"
 ];
@@ -58,12 +62,7 @@ function asPaddedArray(value, len=32, infront=true) {
  * @returns 
  */
 async function formatToTomlProver(block, remintAddress, secret,burnedTokenBalance, contractBalance , hashPaths, provider) {
-    const MAX_HASH_PATH_SIZE = 248; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
-    const MAX_RLP_SIZE = 1000; //should be enough scroll mainnet wasn't going above 621, my guess is 673 bytes max + rlp over head. idk what overhead is tho.
-    // TODO actually find out what the largest value could be 
-    console.log("the blovk bumnerrrrrrrrrrrrrrrrr",block.number)
     const headerRlp = await getBlockHeaderRlp(Number(block.number), provider)
-    console.log({headerRlp})
     return `block_hash = [${[...ethers.toBeArray(block.hash)].map((x)=>`"${x}"`)}] 
 remint_address = "${remintAddress}"
 secret = "${ethers.toBeHex(secret)}"
@@ -80,13 +79,51 @@ hash_path = [${paddArray(hashPaths.account.hashPath, MAX_HASH_PATH_SIZE, 0,false
 leaf_type = "${hashPaths.account.leafNode.type}"
 node_types = [${paddArray(hashPaths.account.nodeTypes, MAX_HASH_PATH_SIZE, 0,false).map((x)=>`"${x}"`)}]
 real_hash_path_len = "${hashPaths.account.hashPath.length}"
+hash_path_bools = [${paddArray(hashPaths.account.leafNode.hashPathBools.slice(0,hashPaths.account.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, 0,false).map((x)=>`"${Number(x)}"`)}]
 
 [storage_proof_data.hash_paths.storage_proof]
 hash_path = [${paddArray(hashPaths.storage.hashPath, MAX_HASH_PATH_SIZE, 0,false).map((x)=>`"${x}"`)}]
 leaf_type = "${hashPaths.storage.leafNode.type}"
 node_types = [${paddArray(hashPaths.storage.nodeTypes, MAX_HASH_PATH_SIZE,  0,false).map((x)=>`"${x}"`)}]
-real_hash_path_len = "${hashPaths.storage.hashPath.length}"`
+real_hash_path_len = "${hashPaths.storage.hashPath.length}"
+hash_path_bools =  [${paddArray(hashPaths.storage.leafNode.hashPathBools.slice(0,hashPaths.storage.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, 0,false).map((x)=>`"${Number(x)}"`)}]`
 
+}
+
+
+async function formatTest(block, remintAddress, secret,burnedTokenBalance, contractBalance , hashPaths, provider) {
+    const headerRlp = await getBlockHeaderRlp(Number(block.number), provider)
+    return`
+    let storage_proof_data = Storage_proof_data {
+        hash_paths :Hash_paths_state_proof{
+                account_proof: Hash_path_proof {
+                hash_path:  [${paddArray(hashPaths.account.hashPath, MAX_HASH_PATH_SIZE, 0,false)}],
+                leaf_type: ${hashPaths.account.leafNode.type},
+                node_types: [${paddArray(hashPaths.account.nodeTypes, MAX_HASH_PATH_SIZE, 0,false)}],
+                real_hash_path_len: ${hashPaths.account.hashPath.length},
+                hash_path_bools: [${paddArray(hashPaths.account.leafNode.hashPathBools.slice(0,hashPaths.account.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, 0,false).map((x)=>`${x}`)}]
+            },
+            storage_proof: Hash_path_proof {
+                hash_path: [${paddArray(hashPaths.storage.hashPath, MAX_HASH_PATH_SIZE, 0,false)}],
+                leaf_type: ${hashPaths.storage.leafNode.type},
+                node_types: [${paddArray(hashPaths.storage.nodeTypes, MAX_HASH_PATH_SIZE,  0,false)}],
+                real_hash_path_len: ${hashPaths.storage.hashPath.length},
+                hash_path_bools: [${paddArray(hashPaths.storage.leafNode.hashPathBools.slice(0,hashPaths.storage.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, 0,false).map((x)=>`${x}`)}]
+
+            },
+        },
+            contract_balance: ${contractBalance},
+            header_rlp:[${[...ethers.toBeArray(ethers.zeroPadBytes(headerRlp,MAX_RLP_SIZE))]}],
+            header_rlp_len:${ethers.toBeArray(headerRlp).length},
+            nonce_codesize_0:${hashPaths.account.leafNode.valuePreimage[0]},
+        };
+
+
+    let secret = ${secret};
+
+    let remint_address = ${remintAddress};
+    let user_balance = [${asPaddedArray(burnedTokenBalance, 32)}];
+    let block_hash =  [${[...ethers.toBeArray(block.hash)]}];`
 }
 
 
@@ -128,6 +165,7 @@ async function main() {
 
     await Bun.write('zkwormholesExample/circuit/Prover.toml', toml)
     console.log({blockHash:block.hash, stateroot: block.stateRoot})
+    console.log(await formatTest(block, remintAddress,secret,burnedTokenBalance, contractBalance, hashPaths, provider))
 }
 
 main()
