@@ -3,6 +3,17 @@ a erc20 token with EIP7503 (zkwormholes) style private transfers.
 Using storage proofs to track the balances of the burn addresses (bassically commitments).  
 
 
+compile and proof with js (from root repo)
+```shell
+cd zkwormholesExample/circuit/; nargo compile; cd ../..;  node zkwormholesExample/scripts/proof.js 
+```
+populate prover.tom (terminal out put prints test for main.nr)
+```shell
+bun run zkwormholesExample/scripts/getProofInputs.js format
+```
+
+sepolia scroll block header is differen and baseFeePerGas
+modify scripts/getScrollProof.js at getBlockHeaderRlp() for mainnet
 
 ```shell
 npx hardhat help
