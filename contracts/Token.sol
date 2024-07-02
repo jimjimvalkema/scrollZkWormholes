@@ -34,7 +34,7 @@ contract Token is ERC20, Ownable, ERC20Permit {
         require(smolVerifier == address(0x0000000000000000000000000000000000000000), "verifier is already set silly");
         require(fullVerifier == address(0x0000000000000000000000000000000000000000), "verifier is already set silly");
         fullVerifier = _fullVerifier;
-        smolVerifier = _smolVerifier
+        smolVerifier = _smolVerifier;
     }
 
     // WARNING anyone can mint
