@@ -50,11 +50,25 @@ contract Token is ERC20, Ownable, ERC20Permit {
         publicInputs[0] = bytes32(bytes20(to));
         publicInputs[1] = bytes32(amount);
         publicInputs[2] = blkhash;
-        if (!IVerifier(verifier).verify(snarkProof, publicInputs)) {
+        if (!IVerifier(smolVerifier).verify(snarkProof, publicInputs)) {
             revert VerificationFailed();
         }
-
         _mint(to, amount);
+    }
 
+    // just incase the contracts leaf will sit deeper than 53 
+    // or less likely the storage tree becomes deeper than 53
+    function reMintFullVerifier(address to, uint256 amount, uint256 blockNum, bytes calldata snarkProof) public {
+        //TODO nullifier WARNING anyone can double spend
+
+        bytes32 blkhash = blockhash(blockNum);
+        bytes32[] memory publicInputs;
+        publicInputs[0] = bytes32(bytes20(to));
+        publicInputs[1] = bytes32(amount);
+        publicInputs[2] = blkhash;
+        if (!IVerifier(fullVerifier).verify(snarkProof, publicInputs)) {
+            revert VerificationFailed();
+        }
+        _mint(to, amount);
     }
 }
