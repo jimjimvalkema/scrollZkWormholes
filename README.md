@@ -12,6 +12,18 @@ populate prover.tom (terminal out put prints test for main.nr)
 bun run zkwormholesExample/scripts/getProofInputs.js format
 ```
 
+test remint sepoilia
+```
+cd zkwormholesExample;
+npx hardhat run scripts/proofAndRemint.js 
+```
+
+deploy
+```
+cd zkwormholesExample;
+npx hardhat run scripts/deploy.cjs --network scrollSepolia
+```
+
 sepolia scroll block header is differen and baseFeePerGas
 modify scripts/getScrollProof.js at getBlockHeaderRlp() for mainnet
 
