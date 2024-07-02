@@ -9,8 +9,8 @@ import { ZkTrieNode, NodeTypes, leafTypes } from "../../scripts/types/ZkTrieNode
 
 const PROVER_TOML = 'zkwormholesExample/circuits/smolProver/Prover.toml'
 
-const MAX_HASH_PATH_SIZE = 248;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
-const MAX_RLP_SIZE = 850//1000; //should be enough scroll mainnet wasn't going above 621, my guess is 673 bytes max + rlp over head. idk what overhead is tho.
+const MAX_HASH_PATH_SIZE = 53;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
+const MAX_RLP_SIZE = 650//1000; //should be enough scroll mainnet wasn't going above 621, my guess is 673 bytes max + rlp over head. idk what overhead is tho.
 // TODO actually find out what the largest value could be 
 
 const abi = [

@@ -2,7 +2,7 @@ import { BarretenbergBackend, BarretenbergVerifier as Verifier } from '@noir-lan
 import { Noir } from '@noir-lang/noir_js';
 import {getProofData, getProofInputsObj} from "./getProofInputs.js"
 
-import circuit from '../circuit/target/zkwormholesEIP7503.json'  assert {type: 'json'};
+import circuit from '../circuits/smolProver/target/zkwormholesEIP7503.json'  assert {type: 'json'};
 
 
 const backend = new BarretenbergBackend(circuit);
