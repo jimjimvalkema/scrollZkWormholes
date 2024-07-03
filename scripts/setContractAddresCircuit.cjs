@@ -80,13 +80,16 @@ async function getCodeHashes(contractAddress = "0x665337447B52FE31B715f616F94a30
     const params = [contractAddress, [ethers.zeroPadBytes("0x00", 32)], blockNumberHex,]
     const proof = await provider.send('eth_getProof', params)
     const compKeccakPreImage = ["0x"+proof.keccakCodeHash.slice(2, 2+32), "0x"+proof.keccakCodeHash.slice(2+32, 2+64)]
-    console.log(compKeccakPreImage)
+    //console.log(compKeccakPreImage)
     //console.log({compKeccakPreImage})
-    return {
+    const codeHashes =  {
         compressedKeccakCodeHash: ethers.toBeHex(poseidon2(compKeccakPreImage, HASH_DOMAIN_BYTE32)),
         keccakCodeHash: proof.keccakCodeHash,
         poseidonCodeHash: proof.poseidonCodeHash
     }
+    console.log({codeHashes})
+    return codeHashes
+    
 }
 
 module.exports = {

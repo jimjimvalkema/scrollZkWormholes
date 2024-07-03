@@ -13,15 +13,16 @@ bun run zkwormholesExample/scripts/getProofInputs.js format
 ```
 
 test remint sepoilia
-```
+```shell
 cd zkwormholesExample;
 npx hardhat run scripts/proofAndRemint.js 
 ```
 
 deploy
-```
+```shell
 cd zkwormholesExample;
-npx hardhat run scripts/deploy.cjs --network scrollSepolia
+npx hardhat run scripts/deploy.cjs --network scrollSepolia;
+npx hardhat ignition deploy ignition/modules/Token.cjs --network scrollSepolia --verify #couldnt verify within deploy.cjs so this is a hacky work around
 ```
 
 sepolia scroll block header is differen and baseFeePerGas

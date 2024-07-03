@@ -1,4 +1,6 @@
 
+const hre = require("hardhat");
+
 const verifiersModule = require("../ignition/modules/Verifiers.cjs");
 const tokenModule = require("../ignition/modules/Token.cjs")
 const {setContractCircuit} = require("./setContractAddresCircuit.cjs")
@@ -16,8 +18,9 @@ const PROVIDERURL = "https://scroll-sepolia.drpc.org"
 const provider = new ethers.JsonRpcProvider(PROVIDERURL)
 
 async function main() {
-  const { token } = await hre.ignition.deploy(tokenModule);
+  const { token } = await hre.ignition.deploy(tokenModule)
   const tokenAddress = await token.getAddress()
+  await token.waitForDeployment()
   await new Promise(resolve => setTimeout(resolve, 60000));//1 min // we rely on eth_getProof to set constants of circuit.
   console.log(`generating verifier contracts code with new token address: ${tokenAddress}`)
   const generatedSolidityVerifiers = await Promise.all([
@@ -29,13 +32,15 @@ async function main() {
   const { FullVerifier, SmolVerifier } = await hre.ignition.deploy(verifiersModule,{
     parameters: { VerifiersModule: {tokenAddress}  },
   });
+  await FullVerifier.waitForDeployment()
+  await SmolVerifier.waitForDeployment()
   console.log(`
     token deployed to: ${tokenAddress}
     with verifiers to: 
       FullVerifier:${await FullVerifier.getAddress()}, 
       SmolVerifier: ${await SmolVerifier.getAddress()})}
   `);
-  await new Promise(resolve => setTimeout(resolve, 60000));//1 min 
+  //await new Promise(resolve => setTimeout(resolve, 60000));//1 min 
   // const contracts = {
   //   token: tokenAddress,
   //   fullVerifier: await FullVerifier.getAddress(),
@@ -54,31 +59,31 @@ async function main() {
   //   await new Promise(resolve => setTimeout(resolve, 10000));//10 seconds 
     
   // }
-  console.log(`verifing: token: ${tokenAddress}`)
-  await hre.run("verify:verify", {
-    address: tokenAddress,
-    //constructorArguments: [],
-    contract: "contracts/Token.sol:Token"
-  });
-  console.log(`verifing: FullVerifier: ${await FullVerifier.getAddress()}`)
-  await hre.run("verify:verify", {
-    address: await FullVerifier.getAddress(),
-    //constructorArguments: [],
-    contract: "contracts/FullVerifier.sol:FullVerifier"
-  });
-  console.log(`verifing: SmolVerifier: ${await SmolVerifier.getAddress()}`)
-  await hre.run("verify:verify", {
-    address: await SmolVerifier.getAddress(),
-    //constructorArguments: [],
-    contract: "contracts/SmolVerifier.sol:SmolVerifier"
-  });
+  // console.log(`verifing: token: ${tokenAddress}`)
+  // await hre.run("verify:verify", {
+  //   address: tokenAddress,
+  //   //constructorArguments: [],
+  //   contract: "contracts/Token.sol:Token"
+  // });
+  // console.log(`verifing: FullVerifier: ${await FullVerifier.getAddress()}`)
+  // await hre.run("verify:verify", {
+  //   address: await FullVerifier.getAddress(),
+  //   //constructorArguments: [],
+  //   contract: "contracts/FullVerifier.sol:FullVerifier"
+  // });
+  // console.log(`verifing: SmolVerifier: ${await SmolVerifier.getAddress()}`)
+  // await hre.run("verify:verify", {
+  //   address: await SmolVerifier.getAddress(),
+  //   //constructorArguments: [],
+  //   contract: "contracts/SmolVerifier.sol:SmolVerifier"
+  // });
 
-  console.log(`
-    token deployed to: ${tokenAddress}
-    with verifiers to: 
-      FullVerifier:${await FullVerifier.getAddress()}, 
-      SmolVerifier: ${await SmolVerifier.getAddress()})}
-  `);
+  // console.log(`
+  //   token deployed to: ${tokenAddress}
+  //   with verifiers to: 
+  //     FullVerifier:${await FullVerifier.getAddress()}, 
+  //     SmolVerifier: ${await SmolVerifier.getAddress()})}
+  // `);
 
 
 }
