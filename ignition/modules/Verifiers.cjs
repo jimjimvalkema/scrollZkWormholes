@@ -10,7 +10,6 @@ module.exports = buildModule("VerifiersModule", (m) => {
   });
 
   const tokenAddress = m.getParameter("tokenAddress");
-  console.log("VerifiersModule", {tokenAddress})
   const token = m.contractAt("Token", tokenAddress)
   m.call(token, "setVerifiers", [FullVerifier, SmolVerifier])
 

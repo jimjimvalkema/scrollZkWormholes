@@ -9,7 +9,7 @@ import { ZkTrieNode, NodeTypes, leafTypes } from "../../scripts/types/ZkTrieNode
 
 const PROVER_TOML = 'zkwormholesExample/circuits/smolProver/Prover.toml'
 
-const MAX_HASH_PATH_SIZE = 53;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
+const MAX_HASH_PATH_SIZE = 32;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
 const MAX_RLP_SIZE = 650//1000; //should be enough scroll mainnet wasn't going above 621, my guess is 673 bytes max + rlp over head. idk what overhead is tho.
 // TODO actually find out what the largest value could be 
 
@@ -65,7 +65,7 @@ function asPaddedArray(value, len=32, infront=true) {
  * @param {hashPaths} hashPaths 
  * @returns 
  */
-async function formatToTomlProver(block, remintAddress, secret,burnedTokenBalance, contractBalance , hashPaths, provider) {
+export async function formatToTomlProver(block, remintAddress, secret,burnedTokenBalance, contractBalance , hashPaths, provider) {
     const headerRlp = await getBlockHeaderRlp(Number(block.number), provider)
     return `block_hash = [${[...ethers.toBeArray(block.hash)].map((x)=>`"${x}"`)}] 
 remint_address = "${remintAddress}"
@@ -104,13 +104,13 @@ export async function getProofData(contractAddress="0x29d801Af49F0D88b6aF01F4A1B
     const secret = 123
     const burnAddress = ethers.hexlify(ethers.toBeArray(poseidon1([123])).slice(0,20))
     console.log({burnAddress})
-    const remintAddress = "0x794464c8c91A2bE4aDdAbfdB82b6db7B1Bb1DBC7"
  
 
 
     const tokenContract = new ethers.Contract(contractAddress, abi, provider)
 
     const burnedTokenBalance = await tokenContract.balanceOf(burnAddress)
+    console.log({burnedTokenBalance})
     //slot pos for balances of weth contract
     const mappingSlot = "0x00"
     //get possition of mapping value keccak(lookUpAddress, mappingPosition ) 
@@ -126,7 +126,7 @@ export async function getProofData(contractAddress="0x29d801Af49F0D88b6aF01F4A1B
 
     const  block  =await provider.getBlock(blockNumber)
     const contractBalance = await provider.getBalance(contractAddress)
-    return {block, remintAddress, secret,burnedTokenBalance, contractBalance , hashPaths, provider, burnAddress}
+    return {block, secret,burnedTokenBalance, contractBalance , hashPaths, provider, burnAddress}
 }
 
 /**

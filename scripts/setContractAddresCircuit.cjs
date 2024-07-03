@@ -7,6 +7,7 @@ const path = require( 'path');
 const  {poseidon2}  = require("../../lib/poseidon-lite-for-scroll/build/index.js")
 const HASH_DOMAIN_ELEMS_BASE = 256;
 const HASH_DOMAIN_BYTE32     = 2 * HASH_DOMAIN_ELEMS_BASE;
+const SOLIDITY_VERSION = "0.8.23"
 
 async function setContractCircuit(contract="0x794464c8c91A2bE4aDdAbfdB82b6db7B1Bb1DBC7", filePath, solidityVerifierDestination, newContractName, provider) {
     const {compressedKeccakCodeHash, poseidonCodeHash} = await getCodeHashes(contract,provider)
@@ -31,8 +32,6 @@ async function setContractCircuit(contract="0x794464c8c91A2bE4aDdAbfdB82b6db7B1B
         
     }
     await file.close()
-
-
     await fs.writeFile(filePath, newFile);
     console.log(`compiling solidity verifier at: ${filePath+"/../../"}`)
     await execProm(`cd ${filePath+"/../../"}; nargo codegen-verifier`)
@@ -60,7 +59,9 @@ async function renameContract(filePath, newName) {
         if (line.startsWith("contract UltraVerifier is BaseUltraVerifier {")) {   
             //TODO poseidon code hash compressed keccak code hash
             newFile += `contract ${newName} is BaseUltraVerifier {\n`
-        } else {
+        } else if (line.startsWith("pragma solidity")) {
+            newFile += `pragma solidity ${SOLIDITY_VERSION};\n`
+        }else {
             newFile+=line+"\n"
         }
         

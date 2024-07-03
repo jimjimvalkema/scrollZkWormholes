@@ -2,7 +2,7 @@
 // Compatible with OpenZeppelin Contracts ^5.0.0
 // no dencun
 // https://docs.scroll.io/en/developers/developer-quickstart/#configure-your-tooling
-pragma solidity ^0.8.23;
+pragma solidity 0.8.23;
 
 //import "../../circuits/zkwormholesEIP7503/contract/zkwormholesEIP7503/plonk_vk.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -44,12 +44,9 @@ contract Token is ERC20, Ownable, ERC20Permit {
 
     function reMint(address to, uint256 amount, uint256 blockNum, bytes calldata snarkProof) public {
         //TODO nullifier WARNING anyone can double spend
-
-        bytes32 blkhash = blockhash(blockNum);
-        bytes32[] memory publicInputs;
-        publicInputs[0] = bytes32(bytes20(to));
-        publicInputs[1] = bytes32(amount);
-        publicInputs[2] = blkhash;
+        _reMint( to,  amount,  blockNum,   snarkProof,  smolVerifier);
+    }
+    function reMintTest(address to, uint256 amount, uint256 blockNum, bytes calldata snarkProof, bytes32[] calldata publicInputs) public {
         if (!IVerifier(smolVerifier).verify(snarkProof, publicInputs)) {
             revert VerificationFailed();
         }
@@ -59,16 +56,34 @@ contract Token is ERC20, Ownable, ERC20Permit {
     // just incase the contracts leaf will sit deeper than 53 
     // or less likely the storage tree becomes deeper than 53
     function reMintFullVerifier(address to, uint256 amount, uint256 blockNum, bytes calldata snarkProof) public {
+        _reMint( to,  amount,  blockNum,   snarkProof,  fullVerifier);
+    }
+
+    // verifier wants the [u8;32] (bytes32 array) as bytes32[32] array.
+    // ex: bytes32[32] array = ['0x0000000000000000000000000000000000000000000000000000000000000031','0x0000000000000000000000000000000000000000000000000000000000000027',etc]
+    // but fields can be normal bytes32
+    // all public inputs are put into a flattened array
+    // so in our case array = [Field + bytes32, bytes32]. which the lenght will be: 1 + 32 + 32 = 65
+    function _formatPublicInputs(address to, bytes32 amount, bytes32 blkhash) private pure returns(bytes32[] memory ){
+        bytes32[] memory publicInputs = new bytes32[](65);
+        publicInputs[0] = bytes32(uint256(uint160(bytes20(to))));
+        for (uint i=1; i < 33; i++) {
+            publicInputs[i] = bytes32(uint256(uint8(amount[i-1])));
+        }
+        for (uint i=33; i < 65; i++) {
+            publicInputs[i] = bytes32(uint256(uint8(blkhash[i-33])));
+        }
+        return publicInputs;
+    }
+
+    function _reMint(address to, uint256 amount, uint256 blockNum, bytes calldata snarkProof, address _verifier) private {
         //TODO nullifier WARNING anyone can double spend
 
         bytes32 blkhash = blockhash(blockNum);
-        bytes32[] memory publicInputs;
-        publicInputs[0] = bytes32(bytes20(to));
-        publicInputs[1] = bytes32(amount);
-        publicInputs[2] = blkhash;
-        if (!IVerifier(fullVerifier).verify(snarkProof, publicInputs)) {
+        bytes32[] memory publicInputs = _formatPublicInputs(to, bytes32(amount), blkhash);
+        if (!IVerifier(_verifier).verify(snarkProof, publicInputs)) {
             revert VerificationFailed();
         }
         _mint(to, amount);
-    }
+    } 
 }

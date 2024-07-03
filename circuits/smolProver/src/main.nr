@@ -7,15 +7,15 @@ use dep::std::hash::keccak256;
 // 54 is the highest value that still run in noirjs wasm
 // might be enough since it can support scroll up to 18014398 billion account and for the contract to have 18014398 billion different slots
 // splitting the proof up into account, storage proof seperately could increase the depth to 108 which would be 324518553000000000000 billion slots
-global MAX_HASH_PATH_SIZE = 53;//248;//32; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
+global MAX_HASH_PATH_SIZE = 32;//248;//32; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
 global MAX_RLP_SIZE = 650;//1000; //should be enough scroll mainnet wasn't going above 621, my guess is 673 bytes max + rlp over head. idk what overhead is tho.
 // TODO actually find out what the largest value could be 
 
 
-global PADDED_CONTRACT_ADDRESS = [167,160,159,249,177,210,109,245,195,134,177,237,232,118,241,192,6,172,42,115,0,0,0,0,0,0,0,0,0,0,0,0];
+global PADDED_CONTRACT_ADDRESS = [243,47,63,16,177,19,242,168,156,95,252,248,126,79,40,62,186,132,154,94,0,0,0,0,0,0,0,0,0,0,0,0];
 global BALANCES_SLOT = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
-global COMPRESSED_KECCAK_CODE_HASH = 0x1ed4dddba302e2ddfc0b8bab629985b13ee5ac63a38010894d1337b3897a0bfa;
-global POSEIDON_CODE_HASH = 0x117be19093a2fb98c4c35c78c3ff852ba4c171faadcba89996d37bcfdb4f3a9b;
+global COMPRESSED_KECCAK_CODE_HASH = 0x114d7519204e232d4c8ddd81772aa32091381c07745dfab453871a66db88c3fe;
+global POSEIDON_CODE_HASH = 0x0cc66bda43bf5746d07bae4ba9d13511453c2e8fbc6955b24664df8ba6030964;
 
 
 struct Storage_proof_data {
@@ -38,14 +38,14 @@ fn get_burn_address(secret: Field) -> [u8;32] {
 
 fn main(
         remint_address:pub Field, // gets the address to mint to
-        user_balance:pub [u8;32], // amount to mint
+        user_balance:pub [u8;32], // amount to mint //TODO split into fields constaint golf
         block_hash:pub [u8;32], 
         secret: Field,
         storage_proof_data: Storage_proof_data,
     ) {
 
     // to prevent the proof being stolen from the mempool and used for a differen withdraw address
-    remint_address * 2;
+    assert(remint_address != 0x0);
     // burn_address = our secret commitment
     let burn_address:[u8;32] = get_burn_address(secret);
 
