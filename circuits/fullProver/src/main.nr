@@ -12,10 +12,10 @@ global MAX_RLP_SIZE = 850;//1000; //should be enough scroll mainnet wasn't going
 // TODO actually find out what the largest value could be 
 
 
-global PADDED_CONTRACT_ADDRESS = [243,47,63,16,177,19,242,168,156,95,252,248,126,79,40,62,186,132,154,94,0,0,0,0,0,0,0,0,0,0,0,0];
+global PADDED_CONTRACT_ADDRESS = [219,159,177,232,214,160,185,192,7,45,62,136,248,51,14,201,204,98,226,31,0,0,0,0,0,0,0,0,0,0,0,0];
 global BALANCES_SLOT = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
-global COMPRESSED_KECCAK_CODE_HASH = 0x114d7519204e232d4c8ddd81772aa32091381c07745dfab453871a66db88c3fe;
-global POSEIDON_CODE_HASH = 0x0cc66bda43bf5746d07bae4ba9d13511453c2e8fbc6955b24664df8ba6030964;
+global COMPRESSED_KECCAK_CODE_HASH = 0x1c339c211346f518a41a7958e813a90b00c7792f29361349c9febdc0ad057d9e;
+global POSEIDON_CODE_HASH = 0x291cfe057a64ae9b99102acf87d4f23f12c888c6b7dbc31cdbd9d9d2d0874227;
 
 
 struct Storage_proof_data {
@@ -45,7 +45,7 @@ fn main(
     ) {
 
     // to prevent the proof being stolen from the mempool and used for a differen withdraw address
-    remint_address * 2;
+    assert(remint_address != 0x0);
     // burn_address = our secret commitment
     let burn_address:[u8;32] = get_burn_address(secret);
 

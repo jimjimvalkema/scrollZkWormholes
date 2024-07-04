@@ -23,6 +23,13 @@ contract Token is ERC20, Ownable, ERC20Permit {
     address public smolVerifier;
     address public fullVerifier;
 
+    // @workaround since BLOCKHASH opcode is useless
+    // https://docs.scroll.io/en/technology/chain/differences/#opcodes
+    mapping (uint256 => bytes32) trustedBlockhash;
+    function setBlockHash(bytes32 blockHash, uint256 blockNum) public onlyOwner {
+        trustedBlockhash[blockNum] = blockHash;
+    }
+
     constructor()
         ERC20("token", "tkn")
         Ownable(msg.sender)
@@ -36,21 +43,36 @@ contract Token is ERC20, Ownable, ERC20Permit {
         fullVerifier = _fullVerifier;
         smolVerifier = _smolVerifier;
     }
+    
+    // //---------------debug--------------------------
+    // // TODO remove debug
+    // function reMintTest(address to, uint256 amount, uint256 blockNum, bytes calldata snarkProof, bytes32[] calldata publicInputs) public {
+    //     if (!IVerifier(smolVerifier).verify(snarkProof, publicInputs)) {
+    //         revert VerificationFailed();
+    //     }
+    //     _mint(to, amount);
+    // }
 
-    // WARNING anyone can mint
+    // // TODO remove debug
+    // function getBlockHash(uint256 blocknum) public view returns(bytes32){
+    //     return blockhash(blocknum);
+    // }
+
+    // // TODO remove debug
+    // function computeFakeBlockHash(uint256 blocknum) public view returns(bytes32){
+    //     return keccak256(abi.encode(block.chainid, blocknum));
+    // }
+
+    // // TODO remove debug // WARNING anyone can mint
     function mint(address to, uint256 amount) public {
         _mint(to, amount);
     }
 
+
+    //---------------public---------------------
     function reMint(address to, uint256 amount, uint256 blockNum, bytes calldata snarkProof) public {
         //TODO nullifier WARNING anyone can double spend
         _reMint( to,  amount,  blockNum,   snarkProof,  smolVerifier);
-    }
-    function reMintTest(address to, uint256 amount, uint256 blockNum, bytes calldata snarkProof, bytes32[] calldata publicInputs) public {
-        if (!IVerifier(smolVerifier).verify(snarkProof, publicInputs)) {
-            revert VerificationFailed();
-        }
-        _mint(to, amount);
     }
 
     // just incase the contracts leaf will sit deeper than 53 
@@ -64,11 +86,14 @@ contract Token is ERC20, Ownable, ERC20Permit {
     // but fields can be normal bytes32
     // all public inputs are put into a flattened array
     // so in our case array = [Field + bytes32, bytes32]. which the lenght will be: 1 + 32 + 32 = 65
-    function _formatPublicInputs(address to, bytes32 amount, bytes32 blkhash) private pure returns(bytes32[] memory ){
+    //TODO make private
+    function _formatPublicInputs(address to, uint256 amount, bytes32 blkhash) private pure returns(bytes32[] memory ) {
+        bytes32 amountBytes = bytes32(uint256(amount));
+        bytes32 toBytes = bytes32(uint256(uint160(bytes20(to))));
         bytes32[] memory publicInputs = new bytes32[](65);
-        publicInputs[0] = bytes32(uint256(uint160(bytes20(to))));
+        publicInputs[0] = toBytes;
         for (uint i=1; i < 33; i++) {
-            publicInputs[i] = bytes32(uint256(uint8(amount[i-1])));
+            publicInputs[i] = bytes32(uint256(uint8(amountBytes[i-1])));
         }
         for (uint i=33; i < 65; i++) {
             publicInputs[i] = bytes32(uint256(uint8(blkhash[i-33])));
@@ -79,8 +104,11 @@ contract Token is ERC20, Ownable, ERC20Permit {
     function _reMint(address to, uint256 amount, uint256 blockNum, bytes calldata snarkProof, address _verifier) private {
         //TODO nullifier WARNING anyone can double spend
 
-        bytes32 blkhash = blockhash(blockNum);
-        bytes32[] memory publicInputs = _formatPublicInputs(to, bytes32(amount), blkhash);
+        // @workaround
+        //blockhash() is fucking use less :,(
+        //bytes32 blkhash = blockhash(blockNum);
+        bytes32 blkhash = trustedBlockhash[blockNum];
+        bytes32[] memory publicInputs = _formatPublicInputs(to, amount, blkhash);
         if (!IVerifier(_verifier).verify(snarkProof, publicInputs)) {
             revert VerificationFailed();
         }

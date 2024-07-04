@@ -21,10 +21,16 @@ async function setContractCircuit(contract="0x794464c8c91A2bE4aDdAbfdB82b6db7B1B
     for await (const line of file.readLines()) {
         if (line.startsWith("global PADDED_CONTRACT_ADDRESS")) {   
             //TODO poseidon code hash compressed keccak code hash
+            console.log(line)
+            console.log(`global PADDED_CONTRACT_ADDRESS = [${paddedContractArr}];\n`)
             newFile += `global PADDED_CONTRACT_ADDRESS = [${paddedContractArr}];\n`
         } else if (line.startsWith("global POSEIDON_CODE_HASH =")) {
+            console.log(line)
+            console.log(`global POSEIDON_CODE_HASH = ${poseidonCodeHash};\n`)
             newFile += `global POSEIDON_CODE_HASH = ${poseidonCodeHash};\n`
         } else if (line.startsWith("global COMPRESSED_KECCAK_CODE_HASH =")) {
+            console.log(line)
+            console.log(`global COMPRESSED_KECCAK_CODE_HASH = ${compressedKeccakCodeHash};\n`)
             newFile += `global COMPRESSED_KECCAK_CODE_HASH = ${compressedKeccakCodeHash};\n`
         } else {
             newFile+=line+"\n"
@@ -33,13 +39,20 @@ async function setContractCircuit(contract="0x794464c8c91A2bE4aDdAbfdB82b6db7B1B
     }
     await file.close()
     await fs.writeFile(filePath, newFile);
-    console.log(`compiling solidity verifier at: ${filePath+"/../../"}`)
-    await execProm(`cd ${filePath+"/../../"}; nargo codegen-verifier`)
+    //console.log(`compiling solidity verifier at: ${filePath+"/../../"}`)
+    await new Promise(resolve => setTimeout(resolve, 10000));
+    const command = `cd ${path.normalize(filePath+"/../../")}; nargo compile; nargo codegen-verifier`
+    console.log({command})
+    await execProm(command)
     const solidityVerifierPath = filePath+"/../../contract/zkwormholesEIP7503/plonk_vk.sol"
+    await new Promise(resolve => setTimeout(resolve, 10000));
 
+    console.log(`await fs.rename(${path.normalize(solidityVerifierPath)}, ${path.normalize(solidityVerifierDestination)})`)
     await fs.rename(path.normalize(solidityVerifierPath), path.normalize(solidityVerifierDestination))
+    await new Promise(resolve => setTimeout(resolve, 10000));
 
     await renameContract( path.normalize(solidityVerifierDestination), newContractName)
+    console.log(`await renameContract(${path.normalize(solidityVerifierDestination)}, ${ newContractName})})`)
 
     //contract UltraVerifier is BaseUltraVerifier {
     console.log("succes")
@@ -58,8 +71,12 @@ async function renameContract(filePath, newName) {
     for await (const line of file.readLines()) {
         if (line.startsWith("contract UltraVerifier is BaseUltraVerifier {")) {   
             //TODO poseidon code hash compressed keccak code hash
+            console.log(line)
+            console.log(`contract ${newName} is BaseUltraVerifier {\n`)
             newFile += `contract ${newName} is BaseUltraVerifier {\n`
         } else if (line.startsWith("pragma solidity")) {
+            console.log(line)
+            console.log(`pragma solidity ${SOLIDITY_VERSION};\n`)
             newFile += `pragma solidity ${SOLIDITY_VERSION};\n`
         }else {
             newFile+=line+"\n"

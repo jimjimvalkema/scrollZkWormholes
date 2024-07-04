@@ -100,10 +100,7 @@ real_hash_path_len = "${hashPaths.storage.hashPath.length}"`
     //scroll
     const PROVIDERURL = "https://scroll-sepolia.drpc.org"
     const provider = new ethers.JsonRpcProvider(PROVIDERURL)
-export async function getProofData(contractAddress="0x29d801Af49F0D88b6aF01F4A1BD11846f0c96672",blockNumber=5093419, provider=provider) {
-    const secret = 123
-    const burnAddress = ethers.hexlify(ethers.toBeArray(poseidon1([123])).slice(0,20))
-    console.log({burnAddress})
+export async function getProofData(contractAddress="0x29d801Af49F0D88b6aF01F4A1BD11846f0c96672",burnAddress,blockNumber=5093419, provider=provider) {
  
 
 
@@ -126,7 +123,7 @@ export async function getProofData(contractAddress="0x29d801Af49F0D88b6aF01F4A1B
 
     const  block  =await provider.getBlock(blockNumber)
     const contractBalance = await provider.getBalance(contractAddress)
-    return {block, secret,burnedTokenBalance, contractBalance , hashPaths, provider, burnAddress}
+    return {block,burnedTokenBalance, contractBalance , hashPaths, provider}
 }
 
 /**

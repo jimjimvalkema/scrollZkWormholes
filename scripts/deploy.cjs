@@ -1,5 +1,5 @@
 
-const hre = require("hardhat");
+// const hre = require("hardhat");
 
 const verifiersModule = require("../ignition/modules/Verifiers.cjs");
 const tokenModule = require("../ignition/modules/Token.cjs")
@@ -18,7 +18,7 @@ const PROVIDERURL = "https://scroll-sepolia.drpc.org"
 const provider = new ethers.JsonRpcProvider(PROVIDERURL)
 
 async function main() {
-  const { token } = await hre.ignition.deploy(tokenModule)
+  const { token } = await hre.ignition.deploy(tokenModule,)
   const tokenAddress = await token.getAddress()
   await token.waitForDeployment()
   await new Promise(resolve => setTimeout(resolve, 60000));//1 min // we rely on eth_getProof to set constants of circuit.
@@ -28,7 +28,8 @@ async function main() {
     setContractCircuit(tokenAddress, SMOLPROVER_MAIN, SMOLPROVER_SOLIDITY_VERIFIER_DESTINATION, "SmolVerifier", provider)
   ])
   console.log(`succesfully generated verifiers: ${JSON.stringify(generatedSolidityVerifiers)}`)
-
+  await new Promise(resolve => setTimeout(resolve, 10000));
+  await hre.run("compile") // hre.ignition.deploy doesnt recompile inside hardhat run,  recompile happens when "npx hardhat run script/deploy.cjs" is run. so contracts modified in here dont get recompilled i have spend days trying to fix a bug created by this issue :(
   const { FullVerifier, SmolVerifier } = await hre.ignition.deploy(verifiersModule,{
     parameters: { VerifiersModule: {tokenAddress}  },
   });
