@@ -13,7 +13,7 @@ const SMOLPROVER_MAIN = __dirname+"/../circuits/smolProver/src/main.nr"
 const SMOLPROVER_SOLIDITY_VERIFIER_DESTINATION = __dirname+"/../contracts/SmolVerifier.sol"
 
 
-//TODO vars
+//TODO use hardhat vars
 const PROVIDERURL = "https://scroll-sepolia.drpc.org"
 const provider = new ethers.JsonRpcProvider(PROVIDERURL)
 

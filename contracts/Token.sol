@@ -87,6 +87,8 @@ contract Token is ERC20, Ownable, ERC20Permit {
     // all public inputs are put into a flattened array
     // so in our case array = [Field + bytes32, bytes32]. which the lenght will be: 1 + 32 + 32 = 65
     //TODO make private
+    // TODO see much gas this cost and if publicInputs can be calldata
+    // does bit shifting instead of indexing safe gas?
     function _formatPublicInputs(address to, uint256 amount, bytes32 blkhash) private pure returns(bytes32[] memory ) {
         bytes32 amountBytes = bytes32(uint256(amount));
         bytes32 toBytes = bytes32(uint256(uint160(bytes20(to))));

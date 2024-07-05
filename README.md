@@ -7,10 +7,6 @@ compile and proof with js (from root repo)
 ```shell
 cd zkwormholesExample/circuits/smolProver; nargo compile; cd ../../..;  node zkwormholesExample/scripts/proof.js
 ```
-populate prover.tom (terminal out put prints test for main.nr)
-```shell
-bun run zkwormholesExample/scripts/getProofInputs.js format
-```
 
 test remint sepoilia
 ```shell
@@ -25,16 +21,9 @@ npx hardhat run scripts/deploy.cjs --network scrollSepolia;
 npx hardhat ignition deploy ignition/modules/Token.cjs --network scrollSepolia --verify #couldnt verify within deploy.cjs so this is a hacky work around
 ```
 
-sepolia scroll block header is differen and baseFeePerGas
+sepolia scroll **block header** is **different** then scroll mainnet. It includes **baseFeePerGas**, while **mainnet scroll doesnt** yet.  
 modify scripts/getScrollProof.js at getBlockHeaderRlp() for mainnet
 
-```shell
-npx hardhat help
-npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat ignition deploy ./ignition/modules/Lock.js
-```
 
 
 https://sepolia.scrollscan.com/address/0xdb9fb1e8d6a0b9c0072d3e88f8330ec9cc62e21f
@@ -60,3 +49,12 @@ node scripts/getProofInputs.js --maxTreeDepth=32 --maxRlplen=650 \
 --secret=123 \
 --rpc=https://scroll-sepolia.drpc.org \
 ```
+
+### notes
+**smolprover** is just **fullProver** but doesnt go down the full **tree depth** (maxTreeDepth) and doesnt allow for a **block header rlp** larger then **650 bytes** (maxRlplen).  
+This is to **reduce ram** usage so it can be proven within **noirjs** and the browser (WASM limits to 4gb ram).  
+  
+The **BLOCKHASH** opcode on scroll **isnt ready** yet so the contract relies on a **trusted oracle** (the deployer) to tell the contract what blockhash is valid.
+
+### WARNING
+There is no nullifier **anyone** can double spend proofs and **drain the contract.**
