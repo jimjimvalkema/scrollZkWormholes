@@ -38,3 +38,25 @@ npx hardhat ignition deploy ./ignition/modules/Lock.js
 
 
 https://sepolia.scrollscan.com/address/0xdb9fb1e8d6a0b9c0072d3e88f8330ec9cc62e21f
+
+
+## generate Prover.toml and test_main() of main.nr
+(just dumps it in the terminal for now)  
+#### fullprover  
+```shell
+cd zkwormholesExample;
+node scripts/getProofInputs.js --maxTreeDepth=248 --maxRlplen=850 \
+--contract=0xDb9Fb1e8d6A0b9C0072D3E88f8330ec9Cc62E21f \
+--recipient=0x93211e420c8F552a0e4836f84892a0D4eb5D6D54 \
+--secret=123 \
+--rpc=https://scroll-sepolia.drpc.org 
+```
+#### smolprover
+```shell
+cd zkwormholesExample;
+node scripts/getProofInputs.js --maxTreeDepth=32 --maxRlplen=650 \
+--contract=0xDb9Fb1e8d6A0b9C0072D3E88f8330ec9Cc62E21f \
+--recipient=0x93211e420c8F552a0e4836f84892a0D4eb5D6D54 \
+--secret=123 \
+--rpc=https://scroll-sepolia.drpc.org \
+```

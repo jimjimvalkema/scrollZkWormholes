@@ -41,6 +41,8 @@ async function main() {
       FullVerifier:${await FullVerifier.getAddress()}, 
       SmolVerifier: ${await SmolVerifier.getAddress()})}
   `);
+
+  // TODO keep the compiled circuit somewhere safe where we can track wich address there deployed to
   //await new Promise(resolve => setTimeout(resolve, 60000));//1 min 
   // const contracts = {
   //   token: tokenAddress,

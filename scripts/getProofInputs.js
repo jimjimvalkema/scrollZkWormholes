@@ -67,16 +67,16 @@ function asPaddedArray(value, len = 32, infront = true) {
  * @param {hashPaths} hashPaths 
  * @returns 
  */
-export async function formatToTomlProver(block,headerRlp, remintAddress, secret, burnedTokenBalance, contractBalance, hashPaths, maxHashPathLen=maxHashPathLen,maxRlpLen=maxRlpLen ) {
+export function formatToTomlProver(block,headerRlp, remintAddress, secret,burnedTokenBalance, contractBalance , hashPaths, maxHashPathLen, maxRlplen) {
     //const headerRlp = await getBlockHeaderRlp(Number(block.number), provider)
     return `block_hash = [${[...ethers.toBeArray(block.hash)].map((x)=>`"${x}"`)}] 
 remint_address = "${remintAddress}"
-secret = "${ethers.toBeHex(secret)}"
+secret = "${secret}"
 user_balance =  [${asPaddedArray(burnedTokenBalance, 32).map((x)=>`"${x}"`)}]
 
 [storage_proof_data]
 contract_balance = "${contractBalance}"
-header_rlp =  [${[...ethers.toBeArray(ethers.zeroPadBytes(headerRlp,maxRlpLen))].map((x)=>`"${x}"`)}]
+header_rlp =  [${[...ethers.toBeArray(ethers.zeroPadBytes(headerRlp,maxRlplen))].map((x)=>`"${x}"`)}]
 header_rlp_len = "${ethers.toBeArray(headerRlp).length}"
 nonce_codesize_0 = "${hashPaths.account.leafNode.valuePreimage[0]}"
 
@@ -99,13 +99,9 @@ real_hash_path_len = "${hashPaths.storage.hashPath.length}"`
 }
 
 export async function getProofData(contractAddress = "0x29d801Af49F0D88b6aF01F4A1BD11846f0c96672", burnAddress, blockNumber = 5093419, provider = provider) {
-
-
-
     const tokenContract = new ethers.Contract(contractAddress, abi, provider)
 
     const burnedTokenBalance = await tokenContract.balanceOf(burnAddress)
-    console.log({ burnedTokenBalance })
     //slot pos for balances of weth contract
     const mappingSlot = "0x00"
     //get possition of mapping value keccak(lookUpAddress, mappingPosition ) 
@@ -135,6 +131,7 @@ function Bytes(input, len) {
     return input.slice(2).match(regEx).map((x) => "0x" + x)
 
 }
+
 /**
  * 
  * @param {*} contractAddress 
@@ -144,34 +141,39 @@ function Bytes(input, len) {
  * @param {*} provider 
  * @returns 
  */
-export async function getProofInputs(contractAddress, blockNumber, remintAddress, secret, provider) {
+export async function getProofInputs(contractAddress, blockNumber, remintAddress, secret, provider, maxHashPathLen=MAX_HASH_PATH_SIZE, maxRlplen=MAX_RLP_SIZE) {
     const burnAddress = ethers.hexlify(ethers.toBeArray(poseidon1([secret])).slice(0,20))
     const {block,burnedTokenBalance, contractBalance , hashPaths}  = await getProofData(contractAddress,burnAddress,blockNumber, provider)
     const headerRlp = await getBlockHeaderRlp(Number(blockNumber), provider)
     return {
         blockData:{block, headerRlp},
-        burnAddress,
+        proofData: {
+            burnAddress,
+            burnedTokenBalance,
+            contractBalance,
+            hashPaths
+        },
         noirJsInputs: {
             storage_proof_data: {
                 hash_paths: {
                     account_proof: {
-                        hash_path: paddArray(hashPaths.account.hashPath, MAX_HASH_PATH_SIZE, ethers.zeroPadBytes("0x00", 32), false).map((x) => (x)),
+                        hash_path: paddArray(hashPaths.account.hashPath, maxHashPathLen, ethers.zeroPadBytes("0x00", 32), false).map((x) => (x)),
                         leaf_type: (ethers.toBeHex(hashPaths.account.leafNode.type)),
-                        node_types: paddArray(hashPaths.account.nodeTypes, MAX_HASH_PATH_SIZE, 0, false),
+                        node_types: paddArray(hashPaths.account.nodeTypes, maxHashPathLen, 0, false),
                         real_hash_path_len: (ethers.toBeHex(hashPaths.account.hashPath.length)),
-                        hash_path_bools: paddArray(hashPaths.account.leafNode.hashPathBools.slice(0, hashPaths.account.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false, false),
+                        hash_path_bools: paddArray(hashPaths.account.leafNode.hashPathBools.slice(0, hashPaths.account.hashPath.length).reverse(), maxHashPathLen, false, false),
                     },
                     storage_proof: {
-                        hash_path: paddArray(hashPaths.storage.hashPath, MAX_HASH_PATH_SIZE, ethers.zeroPadBytes("0x00", 32), false).map((x) => (x)),
+                        hash_path: paddArray(hashPaths.storage.hashPath, maxHashPathLen, ethers.zeroPadBytes("0x00", 32), false).map((x) => (x)),
                         leaf_type: (ethers.toBeHex(hashPaths.storage.leafNode.type)),
-                        node_types: paddArray(hashPaths.storage.nodeTypes, MAX_HASH_PATH_SIZE, 0, false),
+                        node_types: paddArray(hashPaths.storage.nodeTypes, maxHashPathLen, 0, false),
                         real_hash_path_len: (ethers.toBeHex(hashPaths.storage.hashPath.length)),
-                        hash_path_bools: paddArray(hashPaths.storage.leafNode.hashPathBools.slice(0, hashPaths.storage.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false, false),
+                        hash_path_bools: paddArray(hashPaths.storage.leafNode.hashPathBools.slice(0, hashPaths.storage.hashPath.length).reverse(), maxHashPathLen, false, false),
 
                     },
                 },
                 contract_balance: (ethers.toBeHex(contractBalance)),
-                header_rlp: [...ethers.toBeArray(ethers.zeroPadBytes(headerRlp, MAX_RLP_SIZE))].map((x) => ethers.toBeHex(x)),
+                header_rlp: [...ethers.toBeArray(ethers.zeroPadBytes(headerRlp, maxRlplen))].map((x) => ethers.toBeHex(x)),
                 header_rlp_len: ethers.toBeArray(headerRlp).length,
                 nonce_codesize_0: (hashPaths.account.leafNode.valuePreimage[0]),
             },
@@ -184,8 +186,7 @@ export async function getProofInputs(contractAddress, blockNumber, remintAddress
 }
 
 
-export async function formatTest(proofInputs,block,headerRlp, remintAddress, secret,burnedTokenBalance, contractBalance , hashPaths) {
-    const proofInputs = getProofInputs()
+export function formatTest(block,headerRlp, remintAddress, secret,burnedTokenBalance, contractBalance , hashPaths, maxHashPathLen, maxRlplen) {
     // const headerRlp = await getBlockHeaderRlp(Number(block.number), provider)
     return`
 #[test]
@@ -193,30 +194,30 @@ fn test_main() {
     let storage_proof_data = Storage_proof_data {
         hash_paths :Hash_paths_state_proof{
                 account_proof: Hash_path_proof {
-                hash_path:  [${paddArray(hashPaths.account.hashPath, MAX_HASH_PATH_SIZE, 0,false)}],
+                hash_path:  [${paddArray(hashPaths.account.hashPath, maxHashPathLen, 0,false)}],
                 leaf_type: ${hashPaths.account.leafNode.type},
-                node_types: [${paddArray(hashPaths.account.nodeTypes, MAX_HASH_PATH_SIZE, 0,false)}],
+                node_types: [${paddArray(hashPaths.account.nodeTypes, maxHashPathLen, 0,false)}],
                 real_hash_path_len: ${hashPaths.account.hashPath.length},`
                 +
                 `
-                hash_path_bools: [${paddArray(hashPaths.account.leafNode.hashPathBools.slice(0,hashPaths.account.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false,false).map((x)=>`${x}`)}]`
+                hash_path_bools: [${paddArray(hashPaths.account.leafNode.hashPathBools.slice(0,hashPaths.account.hashPath.length).reverse(), maxHashPathLen, false,false).map((x)=>`${x}`)}]`
                 +
                 `
             },
             storage_proof: Hash_path_proof {
-                hash_path: [${paddArray(hashPaths.storage.hashPath, MAX_HASH_PATH_SIZE, 0,false)}],
+                hash_path: [${paddArray(hashPaths.storage.hashPath, maxHashPathLen, 0,false)}],
                 leaf_type: ${hashPaths.storage.leafNode.type},
-                node_types: [${paddArray(hashPaths.storage.nodeTypes, MAX_HASH_PATH_SIZE,  0,false)}],
+                node_types: [${paddArray(hashPaths.storage.nodeTypes, maxHashPathLen,  0,false)}],
                 real_hash_path_len: ${hashPaths.storage.hashPath.length},`
                 +
                 `
-                hash_path_bools: [${paddArray(hashPaths.storage.leafNode.hashPathBools.slice(0,hashPaths.storage.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false,false).map((x)=>`${x}`)}]`
+                hash_path_bools: [${paddArray(hashPaths.storage.leafNode.hashPathBools.slice(0,hashPaths.storage.hashPath.length).reverse(), maxHashPathLen, false,false).map((x)=>`${x}`)}]`
                 +
                 `
             },
         },
             contract_balance: ${contractBalance},
-            header_rlp:[${[...ethers.toBeArray(ethers.zeroPadBytes(headerRlp,MAX_RLP_SIZE))]}],
+            header_rlp:[${[...ethers.toBeArray(ethers.zeroPadBytes(headerRlp,maxRlplen))]}],
             header_rlp_len:${ethers.toBeArray(headerRlp).length},
             nonce_codesize_0:${hashPaths.account.leafNode.valuePreimage[0]},
         };
@@ -227,6 +228,7 @@ fn test_main() {
     let remint_address = ${remintAddress};
     let user_balance = [${asPaddedArray(burnedTokenBalance, 32)}];
     let block_hash =  [${[...ethers.toBeArray(block.hash)]}];
+    main(remint_address,user_balance,block_hash,secret,storage_proof_data);
 }`
 }
 
@@ -237,10 +239,12 @@ async function setDefaults(args) {
         secret: 123,
         rpc:  "https://scroll-sepolia.drpc.org",
         blocknumber: "latest", 
+        maxTreeDepth: MAX_HASH_PATH_SIZE, 
+        maxRlplen: MAX_RLP_SIZE
     }
     for (const defaultParam in defaults) {
         if (args[defaultParam] === undefined) {
-            console.log(`"--${defaultParam}= " not set defaulting to ${defaults[defaultParam]}`)
+            console.log(`"--${defaultParam}=" not set defaulting to: "${defaults[defaultParam]}"`)
             args[defaultParam] = defaults[defaultParam]
         }
     }
@@ -255,13 +259,42 @@ async function main() {
         const remintAddress = args["recipient"]
         const secret = args["secret"]
         const providerUrl = args["rpc"]
+        const maxHashPathLen = args["maxTreeDepth"]
+        const maxRlplen = args["maxRlplen"]
         const provider = new ethers.JsonRpcProvider(providerUrl) 
         const blockNumber =  await provider.getBlockNumber(args["blocknumber"])
-        const proofInputs = await getProofInputs(contractAddress,blockNumber,remintAddress,secret,provider)
+        const proofInputs = await getProofInputs(contractAddress,blockNumber,remintAddress,secret,provider,maxHashPathLen, maxRlplen)
+        
+        // TODO put this in the proper files instead
+        console.log("------proofInputs json----------------------------------")
         console.log({proofInputs})
-        console.log(formatTest(proofInputs))
-
-
+        console.log("--------------------------------------------------------\n")
+        console.log("------test main.nr--------------------------------------")
+        console.log(formatTest(
+            proofInputs.blockData.block, 
+            proofInputs.blockData.headerRlp, 
+            remintAddress, 
+            secret,
+            proofInputs.proofData.burnedTokenBalance, 
+            proofInputs.proofData.contractBalance , 
+            proofInputs.proofData.hashPaths,
+            maxHashPathLen,
+            maxRlplen
+        ))
+        console.log("--------------------------------------------------------\n")
+        console.log("------Prover.toml---------------------------------------")
+        console.log(formatToTomlProver(
+            proofInputs.blockData.block, 
+            proofInputs.blockData.headerRlp, 
+            remintAddress, 
+            secret,
+            proofInputs.proofData.burnedTokenBalance, 
+            proofInputs.proofData.contractBalance , 
+            proofInputs.proofData.hashPaths,
+            maxHashPathLen,
+            maxRlplen
+        ).toString())
+        console.log("--------------------------------------------------------\n")
     }
 
 }

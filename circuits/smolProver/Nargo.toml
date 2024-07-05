@@ -2,7 +2,7 @@
 name = "zkwormholesEIP7503/"
 type = "bin"
 authors = [""]
-compiler_version = ">=0.28.0"
+compiler_version = ">=0.30.0"
 
 [dependencies]
-ScrollStorageProver = { path = "../../../circuit" }
+ScrollStorageProver = { path = "../../../circuits/lib/" }
