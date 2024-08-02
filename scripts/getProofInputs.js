@@ -143,7 +143,7 @@ function Bytes(input, len) {
  */
 export async function getProofInputs(contractAddress, blockNumber, remintAddress, secret, provider, maxHashPathLen=MAX_HASH_PATH_SIZE, maxRlplen=MAX_RLP_SIZE) {
     const burnAddress = ethers.hexlify(ethers.toBeArray(poseidon1([secret])).slice(0,20))
-    const {block,burnedTokenBalance, contractBalance , hashPaths}  = await getProofData(contractAddress,burnAddress,blockNumber, provider)
+    const {block,burnedTokenBalance, contractBalance , hashPaths}  = await getProofData(contractAddress,burnAddress, Number(blockNumber), provider)
     const headerRlp = await getBlockHeaderRlp(Number(blockNumber), provider)
     return {
         blockData:{block, headerRlp},
