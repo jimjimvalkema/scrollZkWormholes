@@ -84,7 +84,7 @@ contract Token is ERC20, Ownable, ERC20Permit {
     // ex: bytes32[32] array = ['0x0000000000000000000000000000000000000000000000000000000000000031','0x0000000000000000000000000000000000000000000000000000000000000027',etc]
     // but fields can be normal bytes32
     // all public inputs are put into a flattened array
-    // so in our case array = [Field + bytes32, bytes32]. which the lenght will be: 1 + 32 + 32 = 65
+    // so in our case array = [Field + bytes32, bytes32 + Field]. which the lenght will be: 1 + 32 + 32 = 66
     //TODO make private
     // TODO see much gas this cost and if publicInputs can be calldata
     // does bit shifting instead of indexing save gas?
@@ -114,6 +114,7 @@ contract Token is ERC20, Ownable, ERC20Permit {
         if (!IVerifier(_verifier).verify(snarkProof, publicInputs)) {
             revert VerificationFailed();
         }
+        //TODO suppy shouldnt increase here (because it doesn't!)
         _mint(to, amount);
     }
 }
