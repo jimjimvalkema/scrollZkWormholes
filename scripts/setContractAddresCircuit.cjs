@@ -41,10 +41,12 @@ async function setContractCircuit(contract="0x794464c8c91A2bE4aDdAbfdB82b6db7B1B
     await fs.writeFile(filePath, newFile);
     //console.log(`compiling solidity verifier at: ${filePath+"/../../"}`)
     await new Promise(resolve => setTimeout(resolve, 10000));
-    const command = `cd ${path.normalize(filePath+"/../../")}; nargo compile; nargo codegen-verifier`
+    //const command = `cd ${path.normalize(filePath+"/../../")}; nargo compile; nargo codegen-verifier`
+    const command = `cd ${path.normalize(filePath+"/../../")}; nargo compile; bb write_vk -b ./target/zkwormholesEIP7503.json; bb contract;`
     console.log({command})
     await execProm(command)
-    const solidityVerifierPath = filePath+"/../../contract/zkwormholesEIP7503/plonk_vk.sol"
+    //const solidityVerifierPath = filePath+"/../../contract/zkwormholesEIP7503/plonk_vk.sol"
+    const solidityVerifierPath = filePath+"/../../target/contract.sol"
     await new Promise(resolve => setTimeout(resolve, 10000));
 
     console.log(`await fs.rename(${path.normalize(solidityVerifierPath)}, ${path.normalize(solidityVerifierDestination)})`)

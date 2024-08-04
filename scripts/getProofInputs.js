@@ -1,6 +1,6 @@
 // const { ethers, N } = require("ethers");
 // const { poseidon1 } = require("poseidon-lite");
-import { poseidon1 } from "poseidon-lite";
+import { poseidon1, poseidon2 } from "poseidon-lite";
 import { ethers } from "ethers";
 import * as fs from 'node:fs/promises';
 import { getHashPathFromProof } from "../../scripts/decodeScrollProof.js"
@@ -67,9 +67,10 @@ function asPaddedArray(value, len = 32, infront = true) {
  * @param {hashPaths} hashPaths 
  * @returns 
  */
-export function formatToTomlProver(block,headerRlp, remintAddress, secret,burnedTokenBalance, contractBalance , hashPaths, maxHashPathLen, maxRlplen) {
+export function formatToTomlProver(block,headerRlp, remintAddress, secret,burnedTokenBalance, contractBalance , hashPaths, maxHashPathLen, maxRlplen, nullifier) {
     //const headerRlp = await getBlockHeaderRlp(Number(block.number), provider)
     return `block_hash = [${[...ethers.toBeArray(block.hash)].map((x)=>`"${x}"`)}] 
+nullifier = "${nullifier}"
 remint_address = "${remintAddress}"
 secret = "${secret}"
 user_balance =  [${asPaddedArray(burnedTokenBalance, 32).map((x)=>`"${x}"`)}]
@@ -98,7 +99,7 @@ real_hash_path_len = "${hashPaths.storage.hashPath.length}"`
 `\nhash_path_bools =  [${paddArray(hashPaths.storage.leafNode.hashPathBools.slice(0,hashPaths.storage.hashPath.length).reverse(), maxHashPathLen, false,false).map((x)=>`"${Number(x)}"`)}]`
 }
 
-export async function getProofData(contractAddress = "0x29d801Af49F0D88b6aF01F4A1BD11846f0c96672", burnAddress, blockNumber = 5093419, provider = provider) {
+export async function getProofData(contractAddress = "0x29d801Af49F0D88b6aF01F4A1BD11846f0c96672", burnAddress, blockNumber = 5093419,secret,remintAddress, provider = provider) {
     const tokenContract = new ethers.Contract(contractAddress, abi, provider)
 
     const burnedTokenBalance = await tokenContract.balanceOf(burnAddress)
@@ -117,7 +118,9 @@ export async function getProofData(contractAddress = "0x29d801Af49F0D88b6aF01F4A
 
     const block = await provider.getBlock(blockNumber)
     const contractBalance = await provider.getBalance(contractAddress)
-    return { block, burnedTokenBalance, contractBalance, hashPaths, provider }
+
+    const nullifier = hashNullifier(secret, remintAddress)
+    return { block, burnedTokenBalance, contractBalance, hashPaths,nullifier, provider }
 }
 
 /**
@@ -132,6 +135,11 @@ function Bytes(input, len) {
 
 }
 
+function hashNullifier(secret, address) {
+    return ethers.toBeHex(poseidon2([secret,address]))
+}
+
+
 /**
  * 
  * @param {*} contractAddress 
@@ -143,16 +151,12 @@ function Bytes(input, len) {
  */
 export async function getProofInputs(contractAddress, blockNumber, remintAddress, secret, provider, maxHashPathLen=MAX_HASH_PATH_SIZE, maxRlplen=MAX_RLP_SIZE) {
     const burnAddress = ethers.hexlify(ethers.toBeArray(poseidon1([secret])).slice(0,20))
-    const {block,burnedTokenBalance, contractBalance , hashPaths}  = await getProofData(contractAddress,burnAddress, Number(blockNumber), provider)
+    const proofData = await getProofData(contractAddress,burnAddress, Number(blockNumber),secret,remintAddress ,provider)
+    const {block,burnedTokenBalance, contractBalance , hashPaths, nullifier}  = {...proofData}
     const headerRlp = await getBlockHeaderRlp(Number(blockNumber), provider)
     return {
         blockData:{block, headerRlp},
-        proofData: {
-            burnAddress,
-            burnedTokenBalance,
-            contractBalance,
-            hashPaths
-        },
+        proofData,
         noirJsInputs: {
             storage_proof_data: {
                 hash_paths: {
@@ -178,6 +182,7 @@ export async function getProofInputs(contractAddress, blockNumber, remintAddress
                 nonce_codesize_0: (hashPaths.account.leafNode.valuePreimage[0]),
             },
             secret: (ethers.toBeHex(secret)),
+            nullifier: nullifier,
             remint_address: (remintAddress),
             user_balance: asPaddedArray(burnedTokenBalance, 32).map((x) => ethers.toBeHex(x)),
             block_hash: [...ethers.toBeArray(block.hash)].map((x) => ethers.toBeHex(x))
@@ -228,7 +233,8 @@ fn test_main() {
     let remint_address = ${remintAddress};
     let user_balance = [${asPaddedArray(burnedTokenBalance, 32)}];
     let block_hash =  [${[...ethers.toBeArray(block.hash)]}];
-    main(remint_address,user_balance,block_hash,secret,storage_proof_data);
+    let nullifier = hash_nullifier(secret, remint_address);
+    main(remint_address,user_balance,block_hash,nullifier,secret,storage_proof_data);
 }`
 }
 
@@ -292,7 +298,8 @@ async function main() {
             proofInputs.proofData.contractBalance , 
             proofInputs.proofData.hashPaths,
             maxHashPathLen,
-            maxRlplen
+            maxRlplen,
+            proofInputs.noirJsInputs.nullifier
         ).toString())
         console.log("--------------------------------------------------------\n")
     }

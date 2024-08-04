@@ -9,7 +9,7 @@ import { Noir } from '@noir-lang/noir_js';
 
 // other
 import { ethers } from 'ethers';
-import { poseidon1 } from "poseidon-lite";
+import { poseidon1, poseidon2 } from "poseidon-lite";
 
 // project imports
 import { formatTest, getProofInputs, formatToTomlProver } from "./getProofInputs.js"
@@ -31,6 +31,7 @@ const tokenAbi = JSON.parse(await fs.readFile(__dirname + "/../ignition/deployme
 // TODO make these public vars of the contract and retrieve them that way
 const MAX_HASH_PATH_SIZE = 32;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
 const MAX_RLP_SIZE = 650
+const FIELD_LIMIT = 21888242871839275222246405745257275088548364400416034343698204186575808495617n //using poseidon so we work with 254 bits instead of 256
 
 async function mint({ to, amount, contract }) {
     const mintTx = await contract.mint(to, amount)
@@ -46,14 +47,35 @@ async function burn({ secret, amount, contract }) {
 async function creatSnarkProof({ proofInputsNoirJs, circuit = circuit }) {
     const backend = new BarretenbergBackend(circuit);
     const noir = new Noir(circuit, backend)
-    const proof = await noir.generateProof(proofInputsNoirJs);
+
+    // pre noirjs 0.31.0 \/
+    //const proof = await noir.generateProof(proofInputsNoirJs);
+    const { witness } = await noir.execute(proofInputsNoirJs);
+    const noirexcute =  await noir.execute(proofInputsNoirJs);
+    console.log({noirexcute})
+    const proof = await backend.generateProof(witness);
 
     //TODO remove this debug
-    const verified = await noir.verifyProof(proof)
+
+    // pre noirjs 0.31.0 \/
+    //const verified = await noir.verifyProof(proof)
+    const verified = await backend.verifyProof(proof)
     console.log({ verified })
 
     return proof 
 }
+
+//TODO do actually math or better lib instead of just rerolling :p
+function getSafeRandomNumber() {
+    let isBigger = true
+    let number = 0n
+    while (isBigger) {
+        number = ethers.toBigInt(crypto.getRandomValues(new Uint8Array( new Array(32))))
+        isBigger = number > FIELD_LIMIT
+    }
+    return number
+}
+
 
 
 async function setBlockHash({ blockHash, blockNumber, contract }) {
@@ -63,9 +85,9 @@ async function setBlockHash({ blockHash, blockNumber, contract }) {
     return setBlockHashTx
 }
 
-async function remint({ to, amount, blockNumber, snarkProof, contract }) {
+async function remint({ to, amount, blockNumber,nullifier, snarkProof, contract }) {
     // verify on chain and reMint!
-    const remintTx = await contract.reMint(to, amount, blockNumber, snarkProof)
+    const remintTx = await contract.reMint(to, amount, blockNumber,nullifier, snarkProof)
     return remintTx
 }
 
@@ -101,7 +123,7 @@ function printTestFileInputs({ proofInputs, secret, recipientWallet, maxHashPath
 }
 
 async function main() {
-    const CONTRACT_ADDRESS = "0xDb9Fb1e8d6A0b9C0072D3E88f8330ec9Cc62E21f"
+    const CONTRACT_ADDRESS = "0x0C506a4855Ab156DB9A504AE5C2c9a50f2FF9BA2"
     // --------------
 
     // --------------provider---------------
@@ -124,7 +146,7 @@ async function main() {
     //---------------burn -------------------
     // mint fresh tokens (normal mint)
     const burnValue = 420000000000000000000n
-    const secret = 123n;
+    const secret = getSafeRandomNumber();
 
     //mint
     const mintTx = await mint({ to: deployerWallet.address, amount: burnValue, contract: contractDeployerWallet })
@@ -132,7 +154,7 @@ async function main() {
 
     // burn
     const { burnTx, burnAddress } = await burn({ secret, amount: burnValue, contract: contractDeployerWallet })
-    console.log({ burnAddress, burnTx: (await burnTx.wait(3)).hash })
+    console.log({ burnAddress, burnTx: (await burnTx.wait(3)).hash }) // could wait less confirmation but
 
 
     // get storage proof
@@ -147,6 +169,7 @@ async function main() {
 
     // get snark proof
     const proof = await creatSnarkProof({ proofInputsNoirJs: proofInputs.noirJsInputs, circuit: circuit })
+    console.log({proof})
 
     //set blockHash(workaroud)
     const blockHash = proofInputs.blockData.block.hash
@@ -162,7 +185,9 @@ async function main() {
         to: RECIPIENT_ADDRESS,
         amount: proofInputs.proofData.burnedTokenBalance,
         blockNumber, //blockNumber: BigInt(proofInputs.blockData.block.number),
-        snarkProof: ethers.hexlify(proof.proof)
+        nullifier: ethers.toBeHex(proofInputs.proofData.nullifier),
+        snarkProof: ethers.hexlify(proof.proof),
+        
     }
     console.log("------------remint tx inputs----------------")
     console.log({ remintInputs })
