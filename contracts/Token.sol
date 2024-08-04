@@ -19,6 +19,7 @@ interface IVerifier {
 error VerificationFailed();
 
 contract Token is ERC20, Ownable, ERC20Permit {
+    mapping(bytes32 => bool) nullifiers;
     // smolverifier doesnt go down the full 248 depth of the tree but is able to run witn noir js (and is faster)
     address public smolVerifier;
     address public fullVerifier;
@@ -43,7 +44,7 @@ contract Token is ERC20, Ownable, ERC20Permit {
         fullVerifier = _fullVerifier;
         smolVerifier = _smolVerifier;
     }
-    
+
     // //---------------debug--------------------------
     // // TODO remove debug
     // function reMintTest(address to, uint256 amount, uint256 blockNum, bytes calldata snarkProof, bytes32[] calldata publicInputs) public {
@@ -68,17 +69,15 @@ contract Token is ERC20, Ownable, ERC20Permit {
         _mint(to, amount);
     }
 
-
     //---------------public---------------------
-    function reMint(address to, uint256 amount, uint256 blockNum, bytes calldata snarkProof) public {
-        //TODO nullifier WARNING anyone can double spend
-        _reMint( to,  amount,  blockNum,   snarkProof,  smolVerifier);
+    function reMint(address to, uint256 amount, uint256 blockNum, bytes32 nullifier, bytes calldata snarkProof) public {
+        _reMint( to,  amount,  blockNum, nullifier, snarkProof,  smolVerifier);
     }
 
-    // just incase the contracts leaf will sit deeper than 53 
+    // just incase the contracts leaf will sit deeper than 53
     // or less likely the storage tree becomes deeper than 53
-    function reMintFullVerifier(address to, uint256 amount, uint256 blockNum, bytes calldata snarkProof) public {
-        _reMint( to,  amount,  blockNum,   snarkProof,  fullVerifier);
+    function reMintFullVerifier(address to, uint256 amount, uint256 blockNum, bytes32 nullifier, bytes calldata snarkProof) public {
+        _reMint( to,  amount,  blockNum, nullifier, snarkProof,  fullVerifier);
     }
 
     // verifier wants the [u8;32] (bytes32 array) as bytes32[32] array.
@@ -88,11 +87,11 @@ contract Token is ERC20, Ownable, ERC20Permit {
     // so in our case array = [Field + bytes32, bytes32]. which the lenght will be: 1 + 32 + 32 = 65
     //TODO make private
     // TODO see much gas this cost and if publicInputs can be calldata
-    // does bit shifting instead of indexing safe gas?
-    function _formatPublicInputs(address to, uint256 amount, bytes32 blkhash) private pure returns(bytes32[] memory ) {
+    // does bit shifting instead of indexing save gas?
+    function _formatPublicInputs(address to, uint256 amount, bytes32 blkhash, bytes32 nullifier) private pure returns (bytes32[] memory) {
         bytes32 amountBytes = bytes32(uint256(amount));
         bytes32 toBytes = bytes32(uint256(uint160(bytes20(to))));
-        bytes32[] memory publicInputs = new bytes32[](65);
+        bytes32[] memory publicInputs = new bytes32[](66);
         publicInputs[0] = toBytes;
         for (uint i=1; i < 33; i++) {
             publicInputs[i] = bytes32(uint256(uint8(amountBytes[i-1])));
@@ -100,20 +99,21 @@ contract Token is ERC20, Ownable, ERC20Permit {
         for (uint i=33; i < 65; i++) {
             publicInputs[i] = bytes32(uint256(uint8(blkhash[i-33])));
         }
+        publicInputs[65] = nullifier;
         return publicInputs;
     }
 
-    function _reMint(address to, uint256 amount, uint256 blockNum, bytes calldata snarkProof, address _verifier) private {
-        //TODO nullifier WARNING anyone can double spend
+    function _reMint(address to, uint256 amount, uint256 blockNum, bytes32 nullifier, bytes calldata snarkProof, address _verifier) private {
+        require(nullifiers[nullifier] == false, "burn address already used");
 
         // @workaround
         //blockhash() is fucking use less :,(
         //bytes32 blkhash = blockhash(blockNum);
         bytes32 blkhash = trustedBlockhash[blockNum];
-        bytes32[] memory publicInputs = _formatPublicInputs(to, amount, blkhash);
+        bytes32[] memory publicInputs = _formatPublicInputs(to, amount, blkhash, nullifier);
         if (!IVerifier(_verifier).verify(snarkProof, publicInputs)) {
             revert VerificationFailed();
         }
         _mint(to, amount);
-    } 
+    }
 }

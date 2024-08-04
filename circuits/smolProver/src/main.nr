@@ -12,10 +12,10 @@ global MAX_RLP_SIZE = 650;//1000; //should be enough scroll mainnet wasn't going
 // TODO actually find out what the largest value could be 
 
 
-global PADDED_CONTRACT_ADDRESS = [219,159,177,232,214,160,185,192,7,45,62,136,248,51,14,201,204,98,226,31,0,0,0,0,0,0,0,0,0,0,0,0];
+global PADDED_CONTRACT_ADDRESS = [12,80,106,72,85,171,21,109,185,165,4,174,92,44,154,80,242,255,155,162,0,0,0,0,0,0,0,0,0,0,0,0];
 global BALANCES_SLOT = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
-global COMPRESSED_KECCAK_CODE_HASH = 0x1c339c211346f518a41a7958e813a90b00c7792f29361349c9febdc0ad057d9e;
-global POSEIDON_CODE_HASH = 0x291cfe057a64ae9b99102acf87d4f23f12c888c6b7dbc31cdbd9d9d2d0874227;
+global COMPRESSED_KECCAK_CODE_HASH = 0x187897c07c4aab759e23b92e29bc88a7df2b9fa79e3e01c6fe3449009e122a3b;
+global POSEIDON_CODE_HASH = 0x22ec8c816d5af4dc2e57c9dd6897762438c4cadfe851d5aca869d077a1e891a2;
 
 
 struct Storage_proof_data {
@@ -36,13 +36,21 @@ fn get_burn_address(secret: Field) -> [u8;32] {
     burn_address
 }
 
+fn hash_nullifier(secret: Field, remint_address: Field) -> Field {
+    poseidon::bn254::hash_2([secret, remint_address])
+}
+
 fn main(
         remint_address:pub Field, // gets the address to mint to
         user_balance:pub [u8;32], // amount to mint //TODO split into fields constaint golf
         block_hash:pub [u8;32], 
+        nullifier:pub Field,
         secret: Field,
         storage_proof_data: Storage_proof_data,
     ) {
+    
+    let computed_nullifier = hash_nullifier(secret, remint_address);
+    assert(computed_nullifier == nullifier, "computed nullifier doesnt match provided nullifier");
 
     // to prevent the proof being stolen from the mempool and used for a differen withdraw address
     assert(remint_address != 0x0);
@@ -98,7 +106,8 @@ fn test_main() {
     let remint_address = 0x93211e420c8F552a0e4836f84892a0D4eb5D6D54;
     let user_balance = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,136,156,6,120,119,192,96,0,0];
     let block_hash =  [97,54,40,183,124,98,179,9,212,185,1,94,136,48,160,119,161,12,119,254,223,38,31,100,94,243,184,145,219,66,194,246];
-    main(remint_address,user_balance,block_hash,secret,storage_proof_data);
+    let nullifier = hash_nullifier(secret, remint_address);
+    main(remint_address,user_balance,block_hash,nullifier,secret,storage_proof_data);
 }
 // #[test]
 // fn test_storage_proof_on_mapping() {
