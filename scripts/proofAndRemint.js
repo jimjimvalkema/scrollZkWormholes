@@ -112,7 +112,7 @@ function printTestFileInputs({ proofInputs, secret, recipientWallet, maxHashPath
 }
 
 async function main() {
-    const CONTRACT_ADDRESS = "0x0C506a4855Ab156DB9A504AE5C2c9a50f2FF9BA2"
+    const CONTRACT_ADDRESS = "0xB10f8e42cBF1b2075d0447Cd40213c046DEB9940"
     // --------------
 
     // --------------provider---------------

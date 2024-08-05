@@ -3,7 +3,7 @@ An erc20 token with [EIP7503](https://eips.ethereum.org/EIPS/eip-7503) (zkwormho
 Using storage proofs to track the balances of the burn addresses (bassically commitments). 
 
 ### deploymed on scroll sepolia
-https://sepolia.scrollscan.com/address/0x0C506a4855Ab156DB9A504AE5C2c9a50f2FF9BA2
+https://sepolia.scrollscan.com/address/0xB10f8e42cBF1b2075d0447Cd40213c046DEB9940
 
 ## install
 ```shell

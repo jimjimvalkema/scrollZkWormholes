@@ -19,7 +19,7 @@ interface IVerifier {
 error VerificationFailed();
 
 contract Token is ERC20, Ownable, ERC20Permit {
-    mapping(bytes32 => bool) nullifiers;
+    mapping(bytes32 => bool) public nullifiers;
     // smolverifier doesnt go down the full 248 depth of the tree but is able to run witn noir js (and is faster)
     address public smolVerifier;
     address public fullVerifier;
