@@ -91,15 +91,20 @@ async function refreshUiInfo({ contract,signer }) {
   await listRemintableBurnsLocalstorage({ contract, signer})
 }
 
-function messageUi(message) {
-  document.getElementById("messages").innerText = message
+function messageUi(message, append=false) {
+  if (append) {
+    document.getElementById("messages").innerHTML += message
+  } else {
+    document.getElementById("messages").innerHTML = message
+  }
   console.log(message)
 }
 
 async function putTxInUi(tx) {
   const explorer = CHAININFO.blockExplorerUrls[0]
-  messageUi(`tx submitted: ${explorer}/${tx.hash}`)
-  messageUi(`tx confirmed: ${explorer}/${(await tx.wait(1)).hash}`)
+  const url = `${explorer}/tx/${tx.hash}`
+  messageUi(`tx submitted: <a href=${url}>${url}</a>`)
+  return tx
 }
 
 async function mintBtnHandler({ contract, decimals, signer }) {
@@ -108,6 +113,7 @@ async function mintBtnHandler({ contract, decimals, signer }) {
     const amount = ethers.parseUnits(amountUnparsed, decimals)
     const tx = await contract.mint(signer.address, amount)
     await putTxInUi(tx)
+    await tx.wait(1)
 
     //TODO this is janky af
     await refreshUiInfo({ contract,signer })
@@ -184,6 +190,7 @@ async function makeRemintUi({ secret,burnBalance, burnAddress, txHash, from, con
   const nullifier = hashNullifier(secret, burnBalance)
   console.log({nullifier})
   const isNullified = await contract.nullifiers(nullifier)
+  console.log({isNullified})
   if (isNullified) {
     li.append(
       br(),
@@ -250,8 +257,11 @@ async function remintBtnHandler({ to, contract, secret , signer}) {
 
   const setBlockHashTx = await contract.setBlockHash(proofInputs.blockData.block.hash,remintInputs.blockNumber)
   await putTxInUi(await setBlockHashTx)
+  messageUi("\n waiting for 2 confirmations for `setBlockHash` transaction to confirm\n after that you can finally remint!!!",true)
+  await setBlockHashTx.wait(2)
   const remintTx =await contract.reMint(remintInputs.to, remintInputs.amount, remintInputs.blockNumber, remintInputs.nullifier, remintInputs.snarkProof)
   await putTxInUi(await remintTx)
+  await remintTx.wait(1)
 
   //TODO this is janky af
   await refreshUiInfo({ contract,signer})
@@ -270,6 +280,7 @@ async function burnBtnHandler({ contract, decimals, signer }) {
     const burnTx = await contract.transfer(burnAddress, amount)
     addBurnToLocalStorage({ secret, burnAddress, from, txHash: burnTx.hash }) // we got a txhash now
     await putTxInUi(burnTx)
+    await burnTx.wait(1)
     await refreshUiInfo({contract,signer})
   })
 
