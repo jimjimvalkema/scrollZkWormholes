@@ -26,7 +26,7 @@ contract Token is ERC20, Ownable, ERC20Permit {
 
     // @workaround since BLOCKHASH opcode is useless
     // https://docs.scroll.io/en/technology/chain/differences/#opcodes
-    mapping (uint256 => bytes32) trustedBlockhash;
+    mapping (uint256 => bytes32) public trustedBlockhash;
     //function setBlockHash(bytes32 blockHash, uint256 blockNum) public onlyOwner {
     function setBlockHash(bytes32 blockHash, uint256 blockNum) public {
         trustedBlockhash[blockNum] = blockHash;
@@ -89,7 +89,7 @@ contract Token is ERC20, Ownable, ERC20Permit {
     //TODO make private
     // TODO see much gas this cost and if publicInputs can be calldata
     // does bit shifting instead of indexing save gas?
-    function _formatPublicInputs(address to, uint256 amount, bytes32 blkhash, bytes32 nullifier) private pure returns (bytes32[] memory) {
+    function _formatPublicInputs(address to, uint256 amount, bytes32 blkhash, bytes32 nullifier) public pure returns (bytes32[] memory) {
         bytes32 amountBytes = bytes32(uint256(amount));
         bytes32 toBytes = bytes32(uint256(uint160(bytes20(to))));
         bytes32[] memory publicInputs = new bytes32[](66);

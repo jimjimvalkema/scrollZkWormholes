@@ -112,7 +112,7 @@ function printTestFileInputs({ proofInputs, secret, recipientWallet, maxHashPath
 }
 
 async function main() {
-    const CONTRACT_ADDRESS = "0x038a89A0f0882506DEd867FB46702106276dBb90"
+    const CONTRACT_ADDRESS = "0x53b17Ccc7A03C1bC3EAB79B0466D4d5D85f576AA"
     // --------------
 
     // --------------provider---------------
@@ -154,7 +154,7 @@ async function main() {
     console.log("------------proof input json----------------")
     console.log({ noirJsInputs: proofInputs.noirJsInputs })
     console.log("---------------------------------------")
-    //printTestFileInputs({proofInputs, secret,recipientWallet})
+    printTestFileInputs({proofInputs, secret,recipientWallet})
 
     // get snark proof
     const proof = await creatSnarkProof({ proofInputsNoirJs: proofInputs.noirJsInputs, circuit: circuit })
@@ -164,7 +164,7 @@ async function main() {
     const blockHash = proofInputs.blockData.block.hash
     const setBlockHashTx = await setBlockHash({ blockHash, blockNumber, contract: contractDeployerWallet })
     console.log({
-        setBlockHashTx: (await setBlockHashTx.wait(1)).hash,
+        setBlockHashTx: (await setBlockHashTx.wait(2)).hash,
         blockHash: proofInputs.blockData.block.hash,
         blockNumber: proofInputs.blockData.block.number
     })

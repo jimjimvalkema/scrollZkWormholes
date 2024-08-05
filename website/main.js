@@ -8,7 +8,7 @@ import { Noir } from '@noir-lang/noir_js';
 
 import { abi as contractAbi } from '../artifacts/contracts/Token.sol/Token.json'
 import { getSafeRandomNumber , getProofInputs, hashNullifier, hashBurnAddress} from '../scripts/getProofInputs'
-const CONTRACT_ADDRESS = "0x038a89A0f0882506DEd867FB46702106276dBb90"
+const CONTRACT_ADDRESS = "0x53b17Ccc7A03C1bC3EAB79B0466D4d5D85f576AA"
 const FIELD_LIMIT = 21888242871839275222246405745257275088548364400416034343698204186575808495617n //using poseidon so we work with 254 bits instead of 256
 const CHAININFO = {
   chainId: "0x8274f",
@@ -55,6 +55,7 @@ async function getContractWithSigner({ abi = contractAbi, chain = CHAININFO, con
   return await dumpErrorsInUi(
     async () => {
       const provider = new ethers.BrowserProvider(window.ethereum)
+      window.provider = provider //debug moment
       await switchNetwork(chain, provider)
       const signer = await provider.getSigner();
       const contract = new ethers.Contract(contractAddress, abi, signer)
@@ -236,7 +237,7 @@ async function remintBtnHandler({ to, contract, secret , signer}) {
 
     const blockNumber = BigInt(await provider.getBlockNumber("latest"))
     const proofInputs = await getProofInputs(contract.target, blockNumber, to, secret, provider, MAX_HASH_PATH_SIZE, MAX_RLP_SIZE)
-    //console.log({proofInputs})
+    console.log({proofInputs})
     const amount = proofInputs.proofData.burnedTokenBalance
 
     const proof = await creatSnarkProof({ proofInputsNoirJs: proofInputs.noirJsInputs, circuit: circuit })
@@ -251,7 +252,7 @@ async function remintBtnHandler({ to, contract, secret , signer}) {
 
     }
     // console.log("------------remint tx inputs----------------")
-    // console.log({ remintInputs })
+    console.log({ remintInputs })
     // console.log("---------------------------------------")
 
     const setBlockHashTx = await contract.setBlockHash(proofInputs.blockData.block.hash,remintInputs.blockNumber)
