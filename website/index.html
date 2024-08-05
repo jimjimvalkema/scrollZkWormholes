@@ -17,11 +17,20 @@
 <body>
   <script type="module" src="/main.js"></script>
   <div class="outer">
+    <div id="faucet" class="inner">
+      <h1><span class="tokenName">TOKENNAME</span> faucet</h1>
+
+      <label for="mintAmountInput">amount</label>
+      <input value="420" max="1000" type="number" name="mintAmountInput" id="mintAmountInput" required />
+      <button id="mintBtn">get <span class="ticker">ticker</span></button>
+      <br>
+      user balance: <span class="userBalance">USERBALANCE</span>
+    </div>
     <div id="burnUi" class="inner">
-      <h1>burn your <span id="tokenName">TOKENNAME</span>!!!</h1>
+      <h1>burn your <span class="tokenName">TOKENNAME</span>!!!</h1>
 
       <label for="burnAmountInput">set burnAmount</label>
-      <input value="123" type="number" name="burnAmount" id="burnAmount" required />
+      <input value="420" type="number" name="burnAmount" id="burnAmount" required />
       <button id="burnBtn">burn it!!!</button>
     </div>
 
@@ -41,6 +50,7 @@
   </div>
 
   <div id="errors" ></div>
+  <div id="messages" ></div>
 
 </body>
 </html>

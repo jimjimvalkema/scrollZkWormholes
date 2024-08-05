@@ -27,7 +27,8 @@ contract Token is ERC20, Ownable, ERC20Permit {
     // @workaround since BLOCKHASH opcode is useless
     // https://docs.scroll.io/en/technology/chain/differences/#opcodes
     mapping (uint256 => bytes32) trustedBlockhash;
-    function setBlockHash(bytes32 blockHash, uint256 blockNum) public onlyOwner {
+    //function setBlockHash(bytes32 blockHash, uint256 blockNum) public onlyOwner {
+    function setBlockHash(bytes32 blockHash, uint256 blockNum) public {
         trustedBlockhash[blockNum] = blockHash;
     }
 
