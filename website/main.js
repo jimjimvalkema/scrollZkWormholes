@@ -7,8 +7,8 @@ import { Noir } from '@noir-lang/noir_js';
 
 
 import { abi as contractAbi } from '../artifacts/contracts/Token.sol/Token.json'
-import { getSafeRandomNumber , getProofInputs} from '../scripts/getProofInputs'
-const CONTRACT_ADDRESS = "0xd95e36EBF8F0132A74eBD42A36Eb3c8DA84a2f83"
+import { getSafeRandomNumber , getProofInputs, hashNullifier, hashBurnAddress} from '../scripts/getProofInputs'
+const CONTRACT_ADDRESS = "0x038a89A0f0882506DEd867FB46702106276dBb90"
 const FIELD_LIMIT = 21888242871839275222246405745257275088548364400416034343698204186575808495617n //using poseidon so we work with 254 bits instead of 256
 const CHAININFO = {
   chainId: "0x8274f",
@@ -79,7 +79,7 @@ async function getContractInfo(contract, signer) {
 }
 
 function setContractInfoUi({ userBalance, name, symbol }) {
-  console.log({ userBalance, name, symbol });
+  //console.log({ userBalance, name, symbol });
   [...document.querySelectorAll(".userBalance")].map((el) => el.innerText = userBalance);
   [...document.querySelectorAll(".tokenName")].map((el) => el.innerText = name);
   [...document.querySelectorAll(".ticker")].map((el) => el.innerText = symbol);
@@ -139,7 +139,7 @@ async function listRemintableBurnsLocalstorage({ contract,signer }) {
     
     for (const burnAddress in allBurns) {
       const { secret, txHash, from } = allBurns[burnAddress]
-      console.log( { secret, txHash, from } )
+      //console.log( { secret, txHash, from } )
       //TODO do async
       const burnBalance = await contract.balanceOf(burnAddress)
       if (txHash || burnBalance > 0n) { // no tx? no balance? nothing there!
@@ -155,9 +155,6 @@ function br() {
   return document.createElement("br")
 }
 
-function hashNullifier(secret, remintAddress) {
-  return ethers.zeroPadValue(ethers.toBeHex(poseidon2([secret, ethers.toBigInt(remintAddress)])),32)
-}
 
 async function makeRemintUi({ secret,burnBalance, burnAddress, txHash, from, contract,decimals ,signer}) {
   const explorer = CHAININFO.blockExplorerUrls[0]
@@ -187,10 +184,10 @@ async function makeRemintUi({ secret,burnBalance, burnAddress, txHash, from, con
   }
 
   //button
-  const nullifier = hashNullifier(secret, burnBalance)
-  console.log({nullifier})
+  const nullifier = hashNullifier(secret)
+
   const isNullified = await contract.nullifiers(nullifier)
-  console.log({isNullified})
+  console.log({secret, burnAddress, nullifier,isNullified})
   if (isNullified) {
     li.append(
       br(),
@@ -218,7 +215,7 @@ async function creatSnarkProof({ proofInputsNoirJs, circuit = circuit }) {
   //const proof = await noir.generateProof(proofInputsNoirJs);
   const { witness } = await noir.execute(proofInputsNoirJs);
   const noirexcute =  await noir.execute(proofInputsNoirJs);
-  console.log({noirexcute})
+
   const proof = await backend.generateProof(witness);
 
   //TODO remove this debug
@@ -232,39 +229,42 @@ async function creatSnarkProof({ proofInputsNoirJs, circuit = circuit }) {
 }
 
 async function remintBtnHandler({ to, contract, secret , signer}) {
-  const provider = contract.runner.provider
-  const MAX_HASH_PATH_SIZE = 32;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
-  const MAX_RLP_SIZE = 650
+  return await dumpErrorsInUi(async () => {
+    const provider = contract.runner.provider
+    const MAX_HASH_PATH_SIZE = 32;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
+    const MAX_RLP_SIZE = 650
 
-  const blockNumber = BigInt(await provider.getBlockNumber("latest"))
-  const proofInputs = await getProofInputs(contract.target, blockNumber, to, secret, provider, MAX_HASH_PATH_SIZE, MAX_RLP_SIZE)
-  const amount = proofInputs.proofData.burnedTokenBalance
+    const blockNumber = BigInt(await provider.getBlockNumber("latest"))
+    const proofInputs = await getProofInputs(contract.target, blockNumber, to, secret, provider, MAX_HASH_PATH_SIZE, MAX_RLP_SIZE)
+    //console.log({proofInputs})
+    const amount = proofInputs.proofData.burnedTokenBalance
 
-  const proof = await creatSnarkProof({ proofInputsNoirJs: proofInputs.noirJsInputs, circuit: circuit })
-  console.log({proof})
-  
-  const remintInputs = {
-    to,
-    amount,
-    blockNumber, //blockNumber: BigInt(proofInputs.blockData.block.number),
-    nullifier: ethers.toBeHex(proofInputs.proofData.nullifier),
-    snarkProof: ethers.hexlify(proof.proof),
+    const proof = await creatSnarkProof({ proofInputsNoirJs: proofInputs.noirJsInputs, circuit: circuit })
+    //console.log({proof})
+    
+    const remintInputs = {
+      to,
+      amount,
+      blockNumber, //blockNumber: BigInt(proofInputs.blockData.block.number),
+      nullifier: ethers.toBeHex(proofInputs.proofData.nullifier),
+      snarkProof: ethers.hexlify(proof.proof),
 
-  }
-  console.log("------------remint tx inputs----------------")
-  console.log({ remintInputs })
-  console.log("---------------------------------------")
+    }
+    // console.log("------------remint tx inputs----------------")
+    // console.log({ remintInputs })
+    // console.log("---------------------------------------")
 
-  const setBlockHashTx = await contract.setBlockHash(proofInputs.blockData.block.hash,remintInputs.blockNumber)
-  await putTxInUi(await setBlockHashTx)
-  messageUi("\n waiting for 2 confirmations for `setBlockHash` transaction to confirm\n after that you can finally remint!!!",true)
-  await setBlockHashTx.wait(2)
-  const remintTx =await contract.reMint(remintInputs.to, remintInputs.amount, remintInputs.blockNumber, remintInputs.nullifier, remintInputs.snarkProof)
-  await putTxInUi(await remintTx)
-  await remintTx.wait(1)
+    const setBlockHashTx = await contract.setBlockHash(proofInputs.blockData.block.hash,remintInputs.blockNumber)
+    await putTxInUi(await setBlockHashTx)
+    messageUi("\n waiting for 2 confirmations for `setBlockHash` transaction to confirm\n after that you can finally remint!!!",true)
+    await setBlockHashTx.wait(2)
+    const remintTx =await contract.reMint(remintInputs.to, remintInputs.amount, remintInputs.blockNumber, remintInputs.nullifier, remintInputs.snarkProof)
+    await putTxInUi(await remintTx)
+    await remintTx.wait(1)
 
-  //TODO this is janky af
-  await refreshUiInfo({ contract,signer})
+    //TODO this is janky af
+    await refreshUiInfo({ contract,signer})
+  })
 
 }
 
@@ -274,7 +274,7 @@ async function burnBtnHandler({ contract, decimals, signer }) {
     const amount = ethers.parseUnits(amountUnparsed, decimals)
 
     const secret = getSafeRandomNumber()
-    const burnAddress = ethers.toBeHex(poseidon1([secret])).slice(0, 2 + 40) // take only first 20 bytes (because eth address are 20 bytes)
+    const burnAddress = hashBurnAddress(secret) // take only last 20 bytes (because eth address are 20 bytes)
     const from = signer.address
     addBurnToLocalStorage({ secret, burnAddress, from, txHash: null }) // user can exit page and then submit the txs so we save it before the burn just in case
     const burnTx = await contract.transfer(burnAddress, amount)
@@ -303,8 +303,6 @@ async function main() {
   //--------------------------
   window.contract = contract
   window.signer = signer
-  console.log(contract)
-
 }
 
 await main()

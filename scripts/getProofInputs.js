@@ -127,8 +127,7 @@ export async function getProofData(contractAddress = "0x29d801Af49F0D88b6aF01F4A
 
     const block = await provider.getBlock(blockNumber)
     const contractBalance = await provider.getBalance(contractAddress)
-
-    const nullifier = hashNullifier(secret, remintAddress)
+    const nullifier = hashNullifier(secret)
     return { block, burnedTokenBalance, contractBalance, hashPaths,nullifier, provider }
 }
 
@@ -144,11 +143,15 @@ function Bytes(input, len) {
 
 }
 
-function hashNullifier(secret, address) {
-    return ethers.toBeHex(poseidon2([secret,address]))
+export function hashNullifier(secret) {
+    const hashedSecret = poseidon1([secret]) //basicaly the burn address but withour the striped bytes
+    return ethers.zeroPadValue(ethers.toBeHex(poseidon2([secret,hashedSecret])),32)
 }
 
+export function hashBurnAddress(secret) {
+    return ethers.hexlify(ethers.toBeArray(poseidon1([secret])).slice(12,32))
 
+}
 /**
  * 
  * @param {*} contractAddress 
@@ -159,7 +162,7 @@ function hashNullifier(secret, address) {
  * @returns 
  */
 export async function getProofInputs(contractAddress, blockNumber, remintAddress, secret, provider, maxHashPathLen=MAX_HASH_PATH_SIZE, maxRlplen=MAX_RLP_SIZE) {
-    const burnAddress = ethers.hexlify(ethers.toBeArray(poseidon1([secret])).slice(0,20))
+    const burnAddress = hashBurnAddress(secret)
     const proofData = await getProofData(contractAddress,burnAddress, Number(blockNumber),secret,remintAddress ,provider)
     const {block,burnedTokenBalance, contractBalance , hashPaths, nullifier}  = {...proofData}
     const headerRlp = await getBlockHeaderRlp(Number(blockNumber), provider)

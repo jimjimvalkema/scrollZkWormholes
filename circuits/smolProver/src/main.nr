@@ -12,10 +12,10 @@ global MAX_RLP_SIZE = 650;//1000; //should be enough scroll mainnet wasn't going
 // TODO actually find out what the largest value could be 
 
 
-global PADDED_CONTRACT_ADDRESS = [217,94,54,235,248,240,19,42,116,235,212,42,54,235,60,141,168,74,47,131,0,0,0,0,0,0,0,0,0,0,0,0];
+global PADDED_CONTRACT_ADDRESS = [3,138,137,160,240,136,37,6,222,216,103,251,70,112,33,6,39,109,187,144,0,0,0,0,0,0,0,0,0,0,0,0];
 global BALANCES_SLOT = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
-global COMPRESSED_KECCAK_CODE_HASH = 0x0e5b956d47f0483da7dfe28339f76257c8d35ea54653ca80b9a6aac388f4b8e3;
-global POSEIDON_CODE_HASH = 0x243057fd71238e6bb4355bcf5dcd36e94fb187f69618f9807f19d4c632ab13aa;
+global COMPRESSED_KECCAK_CODE_HASH = 0x0e37397f828ee3a48bf46a8b6acc294986b0e9557df56b338339ea655fd6b915;
+global POSEIDON_CODE_HASH = 0x04b83ef097ba563cff61e753d6a8a911dd0be46f232a785e29b0de79b0cb49b7;
 
 
 struct Storage_proof_data {
@@ -36,8 +36,9 @@ fn get_burn_address(secret: Field) -> [u8;32] {
     burn_address
 }
 
-fn hash_nullifier(secret: Field, remint_address: Field) -> Field {
-    poseidon::bn254::hash_2([secret, remint_address])
+fn hash_nullifier(secret: Field) -> Field {
+    let hashed_secret = poseidon::bn254::hash_1([secret]);
+    poseidon::bn254::hash_2([secret, hashed_secret])
 }
 
 fn main(
@@ -48,12 +49,12 @@ fn main(
         secret: Field,
         storage_proof_data: Storage_proof_data,
     ) {
-    
-    let computed_nullifier = hash_nullifier(secret, remint_address);
-    assert(computed_nullifier == nullifier, "computed nullifier doesnt match provided nullifier");
-
     // to prevent the proof being stolen from the mempool and used for a differen withdraw address
     assert(remint_address != 0x0);
+
+    let computed_nullifier = hash_nullifier(secret);
+    assert(computed_nullifier == nullifier, "computed nullifier doesnt match provided nullifier");
+
     // burn_address = our secret commitment
     let burn_address:[u8;32] = get_burn_address(secret);
 
@@ -106,7 +107,7 @@ fn test_main() {
     let remint_address = 0x93211e420c8F552a0e4836f84892a0D4eb5D6D54;
     let user_balance = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,136,156,6,120,119,192,96,0,0];
     let block_hash =  [97,54,40,183,124,98,179,9,212,185,1,94,136,48,160,119,161,12,119,254,223,38,31,100,94,243,184,145,219,66,194,246];
-    let nullifier = hash_nullifier(secret, remint_address);
+    let nullifier = hash_nullifier(secret);
     main(remint_address,user_balance,block_hash,nullifier,secret,storage_proof_data);
 }
 // #[test]
