@@ -21,7 +21,7 @@ async function main() {
   const { token } = await hre.ignition.deploy(tokenModule,)
   const tokenAddress = await token.getAddress()
   await token.waitForDeployment()
-  await new Promise(resolve => setTimeout(resolve, 60000));//1 min // we rely on eth_getProof to set constants of circuit.
+  await new Promise(resolve => setTimeout(resolve, 120000));//1 min // we rely on eth_getProof to set constants of circuit.
   console.log(`generating verifier contracts code with new token address: ${tokenAddress}`)
   const generatedSolidityVerifiers = await Promise.all([
     setContractCircuit(tokenAddress, FULLPROVER_MAIN, FULLPROVER_SOLIDITY_VERIFIER_DESTINATION, "FullVerifier", provider), 
