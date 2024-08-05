@@ -18,7 +18,16 @@ const MAX_RLP_SIZE = 650//1000; //should be enough scroll mainnet wasn't going a
 const abi = [
     "function balanceOf(address) view returns (uint)"
 ];
-
+//TODO do actually math or better lib instead of just rerolling :p
+export function getSafeRandomNumber() {
+    let isBigger = true
+    let number = 0n
+    while (isBigger) {
+        number = ethers.toBigInt(crypto.getRandomValues(new Uint8Array( new Array(32))))
+        isBigger = number > FIELD_LIMIT
+    }
+    return number
+}
 
 
 async function getProof(contractAddress, storageKey, blockNumber, provider) {
@@ -306,4 +315,4 @@ async function main() {
 
 }
 
-main()
+//main()

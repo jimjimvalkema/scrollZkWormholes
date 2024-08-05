@@ -12,7 +12,7 @@ import { ethers } from 'ethers';
 import { poseidon1, poseidon2 } from "poseidon-lite";
 
 // project imports
-import { formatTest, getProofInputs, formatToTomlProver } from "./getProofInputs.js"
+import { formatTest, getProofInputs, formatToTomlProver,getSafeRandomNumber } from "./getProofInputs.js"
 import circuit from '../circuits/smolProver/target/zkwormholesEIP7503.json'  assert {type: 'json'};
 
 //---- node trips up on the # in the file name. This is a work around----
@@ -63,17 +63,6 @@ async function creatSnarkProof({ proofInputsNoirJs, circuit = circuit }) {
     console.log({ verified })
 
     return proof 
-}
-
-//TODO do actually math or better lib instead of just rerolling :p
-function getSafeRandomNumber() {
-    let isBigger = true
-    let number = 0n
-    while (isBigger) {
-        number = ethers.toBigInt(crypto.getRandomValues(new Uint8Array( new Array(32))))
-        isBigger = number > FIELD_LIMIT
-    }
-    return number
 }
 
 
