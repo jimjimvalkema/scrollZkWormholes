@@ -8,7 +8,7 @@ import { Noir } from '@noir-lang/noir_js';
 
 import { abi as contractAbi } from '../artifacts/contracts/Token.sol/Token.json'
 import { getSafeRandomNumber , getProofInputs} from '../scripts/getProofInputs'
-const CONTRACT_ADDRESS = "0xB10f8e42cBF1b2075d0447Cd40213c046DEB9940"
+const CONTRACT_ADDRESS = "0xd95e36EBF8F0132A74eBD42A36Eb3c8DA84a2f83"
 const FIELD_LIMIT = 21888242871839275222246405745257275088548364400416034343698204186575808495617n //using poseidon so we work with 254 bits instead of 256
 const CHAININFO = {
   chainId: "0x8274f",
@@ -19,7 +19,7 @@ const CHAININFO = {
     symbol: "ETH",
     decimals: 18
   },
-  blockExplorerUrls: ["https://api-sepolia.scrollscan.com"]
+  blockExplorerUrls: ["https://sepolia.scrollscan.com"]
 }
 
 
@@ -79,9 +79,10 @@ async function getContractInfo(contract, signer) {
 }
 
 function setContractInfoUi({ userBalance, name, symbol }) {
-  document.querySelectorAll(".userBalance").innerText = userBalance
-  document.querySelectorAll(".tokenName").innerText = name
-  document.querySelectorAll(".ticker").innerText = symbol
+  console.log({ userBalance, name, symbol });
+  [...document.querySelectorAll(".userBalance")].map((el) => el.innerText = userBalance);
+  [...document.querySelectorAll(".tokenName")].map((el) => el.innerText = name);
+  [...document.querySelectorAll(".ticker")].map((el) => el.innerText = symbol);
 }
 
 async function refreshUiInfo({ contract,signer }) {
@@ -175,7 +176,7 @@ async function makeRemintUi({ secret,burnBalance, burnAddress, txHash, from, con
   if (txHash) {
     const txHashEl = document.createElement("a")
     txHashEl.innerText = `${txHash}`
-    txHashEl.href = `${explorer}/${txHash}`
+    txHashEl.href = `${explorer}/tx/${txHash}`
     li.append(br(), `tx: `,txHashEl)
   }
 
@@ -247,10 +248,9 @@ async function remintBtnHandler({ to, contract, secret , signer}) {
   console.log({ remintInputs })
   console.log("---------------------------------------")
 
-  const setBlockHashTx = contract.setBlockHash(proofInputs.blockData.block.hash,remintInputs.blockNumber)
-  const remintTx = contract.reMint(remintInputs.to, remintInputs.amount, remintInputs.blockNumber, remintInputs.nullifier, remintInputs.snarkProof)
-
+  const setBlockHashTx = await contract.setBlockHash(proofInputs.blockData.block.hash,remintInputs.blockNumber)
   await putTxInUi(await setBlockHashTx)
+  const remintTx =await contract.reMint(remintInputs.to, remintInputs.amount, remintInputs.blockNumber, remintInputs.nullifier, remintInputs.snarkProof)
   await putTxInUi(await remintTx)
 
   //TODO this is janky af
@@ -270,6 +270,7 @@ async function burnBtnHandler({ contract, decimals, signer }) {
     const burnTx = await contract.transfer(burnAddress, amount)
     addBurnToLocalStorage({ secret, burnAddress, from, txHash: burnTx.hash }) // we got a txhash now
     await putTxInUi(burnTx)
+    await refreshUiInfo({contract,signer})
   })
 
 }

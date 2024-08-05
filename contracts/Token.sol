@@ -106,6 +106,7 @@ contract Token is ERC20, Ownable, ERC20Permit {
 
     function _reMint(address to, uint256 amount, uint256 blockNum, bytes32 nullifier, bytes calldata snarkProof, address _verifier) private {
         require(nullifiers[nullifier] == false, "burn address already used");
+        nullifiers[nullifier] = true;
 
         // @workaround
         //blockhash() is fucking use less :,(
