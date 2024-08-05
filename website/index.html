@@ -7,7 +7,7 @@
         width: 100%;
     }
     .inner {
-        width: 45%;
+        width: 47%;
         border: 1px solid black;
         padding: 10px;
         word-wrap: break-word;
@@ -16,14 +16,31 @@
 </head>
 <body>
   <script type="module" src="/main.js"></script>
-  <h1>Noir app</h1>
-  <div class="input-area">
-    <input id="guessInput" type="number" placeholder="Enter your guess" />
-    <button id="submitGuess">Submit Guess</button>
-  </div>
   <div class="outer">
-    <div id="logs" class="inner"><h2>Logs</h2></div>
-    <div id="results" class="inner"><h2>Proof</h2></div>
+    <div id="burnUi" class="inner">
+      <h1>burn your <span id="tokenName">TOKENNAME</span>!!!</h1>
+
+      <label for="burnAmountInput">set burnAmount</label>
+      <input value="123" type="number" name="burnAmount" id="burnAmount" required />
+      <button id="burnBtn">burn it!!!</button>
+    </div>
+
+    <div id="remintUi" class="inner">
+      <h1>Privately remint your tokens</h1>
+      
+      <label for="burnedTokens">burned tokens</label>
+      <ul id="burnedTokens">
+        <li>
+          test
+
+        </li>
+      </ul>
+    </div>
+
+
   </div>
+
+  <div id="errors" ></div>
+
 </body>
 </html>
