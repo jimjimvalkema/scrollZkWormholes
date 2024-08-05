@@ -8,7 +8,7 @@ import { Noir } from '@noir-lang/noir_js';
 
 import { abi as contractAbi } from '../artifacts/contracts/Token.sol/Token.json'
 import { getSafeRandomNumber , getProofInputs, hashNullifier, hashBurnAddress} from '../scripts/getProofInputs'
-const CONTRACT_ADDRESS = "0x53b17Ccc7A03C1bC3EAB79B0466D4d5D85f576AA"
+const CONTRACT_ADDRESS = "0x0afb6619a28FAA9734c52B4BaA488a98216fb655"
 const FIELD_LIMIT = 21888242871839275222246405745257275088548364400416034343698204186575808495617n //using poseidon so we work with 254 bits instead of 256
 const CHAININFO = {
   chainId: "0x8274f",
