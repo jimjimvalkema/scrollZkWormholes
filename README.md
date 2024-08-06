@@ -21,8 +21,6 @@ npx hardhat vars set PRIVATE_KEY; #<=deployment key
 npx hardhat vars set SEPOLIA_SCROLL_ETHERSCAN_KEY;;
 ```
 
-
-
 ### deploy
 ```shell
 cd zkwormholesExample;
@@ -37,14 +35,13 @@ npx hardhat ignition deploy ignition/modules/Token.cjs --network scrollSepolia -
 npx hardhat vars set RECIPIENT_PRIVATE_KEY;
 ```
 
-
 ### do remint
 ```shell
 cd zkwormholesExample;
 npx hardhat run scripts/proofAndRemint.js 
 ```
 
-## generate Prover.toml and test_main() of main.nr
+<!-- ## generate Prover.toml and test_main() of main.nr
 (just dumps it in the terminal for now)  
 #### fullprover  
 ```shell
@@ -63,16 +60,59 @@ node scripts/getProofInputs.js --maxTreeDepth=32 --maxRlplen=650 \
 --recipient=0x93211e420c8F552a0e4836f84892a0D4eb5D6D54 \
 --secret=123 \
 --rpc=https://scroll-sepolia.drpc.org \
-```
+``` -->
 
 ## notes
-**smolprover** is just **fullProver** but doesnt go down the full **tree depth** (maxTreeDepth) and doesnt allow for a **block header rlp** larger then **650 bytes** (maxRlplen).  
-This is to **reduce ram** usage so it can be proven within **noirjs** and the browser (WASM limits to 4gb ram).  
-  
-The **BLOCKHASH** opcode on scroll **isnt ready** yet so the contract relies on a **trusted oracle** (the deployer) to tell the contract what blockhash is valid.  
-  
-sepolia scroll **block header** is **different** then scroll mainnet. It includes **baseFeePerGas**, while **mainnet scroll doesnt** yet.  
-modify **scripts/getScrollProof.js** at getBlockHeaderRlp() for mainnet
 
-### WARNING
-There is no nullifier **anyone** can double spend proofs and **drain the contract.**
+### smolprover and fullProver
+The contract uses 2 verifiers: **smolprover** and **fullProver**. This is because noirjs has a **limit on ram (4gb)**, so **smollProver** uses **smaller** parameters that **assume** the chain **doesnt becomes larger.**  
+**FullProver** is there just incase the **chain grows outside** of the parameters of **smolprover**.  
+More specifically **full prover** is able to go down the **full** **248 tree depth** and can handle a **blockheader** up to **850 bytes**.  
+
+```python
+global MAX_HASH_PATH_SIZE = 248;
+global MAX_RLP_SIZE = 850;
+```
+*at line 10-11 in circuits/fullprover/src/main.nr*
+*https://github.com/jimjimvalkema/scrollZkStorageProofs/blob/main/zkwormholesExample/circuits/fullProver/src/main.nr#L10*
+
+### no BLOCKHASH
+The **BLOCKHASH** opcode on scroll **isnt ready** yet so the contract relies on a **trusted oracle** (the deployer) to tell the contract what blockhash is valid.  
+
+### different blockheaders
+**sepolia** scroll **block header** is **different** then scroll **mainnet**. It includes **baseFeePerGas**, while **mainnet** scroll **doesnt** yet.  
+modify `../scripts/getScrollProof.js` at getBlockHeaderRlp() for mainnet
+
+
+<!-- TODO this config should be within the example folder -->
+```js
+    const headerData = [
+        block.parentHash,       
+        block.sha3Uncles,       
+        block.miner,             
+        block.stateRoot,         
+        block.transactionsRoot, 
+        block.receiptsRoot,      
+        block.logsBloom,       
+        block.difficulty,       
+        block.number,           
+        block.gasLimit,                 
+        block.gasUsed,            
+        block.timestamp,                                
+        block.extraData,       
+        block.mixHash,                 
+        block.nonce,            
+
+        // is in scroll-sepolia but not mainnet yet
+        block.baseFeePerGas,
+        
+        // in neither chains
+        // block.withdrawalsRoot,
+        // block.blobGasUsed,
+        // block.excessBlobGas,
+        // block.parentBeaconBlockRoot
+
+    ]
+```
+*at line 259-283 ../scripts/getScrollProof.js*
+*https://github.com/jimjimvalkema/scrollZkStorageProofs/blob/main/scripts/getScrollProof.js#L259*
