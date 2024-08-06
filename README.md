@@ -68,13 +68,14 @@ node scripts/getProofInputs.js --maxTreeDepth=32 --maxRlplen=650 \
 The contract uses 2 verifiers: **smolprover** and **fullProver**. This is because noirjs has a **limit on ram (4gb)**, so **smollProver** uses **smaller** parameters that **assume** the chain **doesnt becomes larger.**  
 **FullProver** is there just incase the **chain grows outside** of the parameters of **smolprover**.  
 More specifically **full prover** is able to go down the **full** **248 tree depth** and can handle a **blockheader** up to **850 bytes**.  
+While **smolprover** is set to **tree depth** of **26** and **650 bytes** for the **blockheader**
 
 ```python
-global MAX_HASH_PATH_SIZE = 248;
-global MAX_RLP_SIZE = 850;
+global MAX_HASH_PATH_SIZE = 26;
+global MAX_RLP_SIZE = 650;
 ```
-*at line 10-11 in circuits/fullprover/src/main.nr*
-*https://github.com/jimjimvalkema/scrollZkStorageProofs/blob/main/zkwormholesExample/circuits/fullProver/src/main.nr#L10*
+*at line 13-14 in circuits/smolprover/src/main.nr*
+*https://github.com/jimjimvalkema/scrollZkStorageProofs/blob/main/zkwormholesExample/circuits/smolProver/src/main.nr#L13*
 
 ### no BLOCKHASH
 The **BLOCKHASH** opcode on scroll **isnt ready** yet so the contract relies on a **trusted oracle** (the deployer) to tell the contract what blockhash is valid.  
@@ -105,7 +106,7 @@ modify `../scripts/getScrollProof.js` at getBlockHeaderRlp() for mainnet
 
         // is in scroll-sepolia but not mainnet yet
         block.baseFeePerGas,
-        
+
         // in neither chains
         // block.withdrawalsRoot,
         // block.blobGasUsed,
