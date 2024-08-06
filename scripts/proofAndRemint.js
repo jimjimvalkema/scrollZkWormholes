@@ -29,7 +29,7 @@ const tokenAbi = JSON.parse(await fs.readFile(__dirname + "/../ignition/deployme
 
 // --------------contract config---------------
 // TODO make these public vars of the contract and retrieve them that way
-const MAX_HASH_PATH_SIZE = 32;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
+const MAX_HASH_PATH_SIZE = 26;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
 const MAX_RLP_SIZE = 650
 const FIELD_LIMIT = 21888242871839275222246405745257275088548364400416034343698204186575808495617n //using poseidon so we work with 254 bits instead of 256
 
@@ -112,7 +112,7 @@ function printTestFileInputs({ proofInputs, secret, recipientWallet, maxHashPath
 }
 
 async function main() {
-    const CONTRACT_ADDRESS = "0x0afb6619a28FAA9734c52B4BaA488a98216fb655"
+    const CONTRACT_ADDRESS = "0x20EF4cC5d68198acacDe4468107314A629522d6E"
     // --------------
 
     // --------------provider---------------
@@ -121,12 +121,13 @@ async function main() {
     // --------------
 
     // --------------wallet config---------------
-    const RECIPIENT_ADDRESS = "0x93211e420c8F552a0e4836f84892a0D4eb5D6D54"
+    
     const RPIVATE_KEY = vars.get("PRIVATE_KEY");
     const RECIPIENT_PRIVATE_KEY = vars.get("RECIPIENT_PRIVATE_KEY")
     // connect contracts
     const deployerWallet = new ethers.Wallet(RPIVATE_KEY, provider)
     const recipientWallet = new ethers.Wallet(RECIPIENT_PRIVATE_KEY, provider)
+    const RECIPIENT_ADDRESS = recipientWallet.address
     const contractDeployerWallet = new ethers.Contract(CONTRACT_ADDRESS, tokenAbi, deployerWallet);
     const contractRecipientWallet = new ethers.Contract(CONTRACT_ADDRESS, tokenAbi, recipientWallet);
     // --------------

@@ -33,7 +33,7 @@ contract Token is ERC20, Ownable, ERC20Permit {
     }
 
     constructor()
-        ERC20("token", "tkn")
+        ERC20("zkwormholes-token", "WRMHL")
         Ownable(msg.sender)
         ERC20Permit("token")
     {

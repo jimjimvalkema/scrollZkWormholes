@@ -8,7 +8,7 @@ import { Noir } from '@noir-lang/noir_js';
 
 import { abi as contractAbi } from '../artifacts/contracts/Token.sol/Token.json'
 import { getSafeRandomNumber , getProofInputs, hashNullifier, hashBurnAddress} from '../scripts/getProofInputs'
-const CONTRACT_ADDRESS = "0x0afb6619a28FAA9734c52B4BaA488a98216fb655"
+const CONTRACT_ADDRESS = "0x20EF4cC5d68198acacDe4468107314A629522d6E"
 const FIELD_LIMIT = 21888242871839275222246405745257275088548364400416034343698204186575808495617n //using poseidon so we work with 254 bits instead of 256
 const CHAININFO = {
   chainId: "0x8274f",
@@ -208,7 +208,7 @@ async function makeRemintUi({ secret,burnBalance, burnAddress, txHash, from, con
 }
 
 async function creatSnarkProof({ proofInputsNoirJs, circuit = circuit }) {
-  messageUi("NOTICE: noirjs can only use 1 core. This can take up to 7min :/")
+  messageUi("NOTICE: noirjs can only use 1 core. This can take 7~10min :/")
   const backend = new BarretenbergBackend(circuit);
   const noir = new Noir(circuit, backend)
 
@@ -232,7 +232,7 @@ async function creatSnarkProof({ proofInputsNoirJs, circuit = circuit }) {
 async function remintBtnHandler({ to, contract, secret , signer}) {
   return await dumpErrorsInUi(async () => {
     const provider = contract.runner.provider
-    const MAX_HASH_PATH_SIZE = 32;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
+    const MAX_HASH_PATH_SIZE = 26;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
     const MAX_RLP_SIZE = 650
 
     const blockNumber = BigInt(await provider.getBlockNumber("latest"))
