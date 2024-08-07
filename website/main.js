@@ -210,14 +210,15 @@ async function makeRemintUi({ secret,burnBalance, burnAddress, txHash, from, con
 async function creatSnarkProof({ proofInputsNoirJs, circuit = circuit }) {
   if (window.crossOriginIsolated === false) {
     messageUi(`
-      NOTICE: noirjs can only use 1 core because window.crossOriginIsolated = false. This can take 7~10min :/\n
-      This is likely because the server running this has not set it's cors header properly \n
-      They need to be like this: \n
+      <b>NOTICE</b>: prover can only use <b>1 core</b>. This can take  <b>7~10min :/</b>\n <br>
+      This is because window.crossOriginIsolated = false. <br>
+      This is likely because the server running this has not set it's cors header properly \n <br>
+      They need to be like this: \n <br>
       <code>
-        ...
-        "Cross-Origin-Embedder-Policy":"require-corp"
-        "Cross-Origin-Opener-Policy":"same-origin"
-        ...
+        ...<br>
+        "Cross-Origin-Embedder-Policy":"require-corp"<br>
+        "Cross-Origin-Opener-Policy":"same-origin"<br>
+        ...<br>
       </code>
       `)
   }

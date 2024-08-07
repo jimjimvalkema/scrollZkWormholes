@@ -2,7 +2,7 @@
 An erc20 token with [EIP7503](https://eips.ethereum.org/EIPS/eip-7503) (zkwormholes) style private transfers.  
 Using storage proofs to track the balances of the burn addresses (bassically commitments). 
 
-try it out: https://bafybeiepgh2dczi2ejs4t3mapafqs34xx74pqsfm5slzvkq7olhvbcwof4.ipfs.dweb.link/
+try it out: https://bafybeih4zlk6jlopnxgectlar7yd7hrp7jovtkk545ktdb2wgdsoa7kf4m.ipfs.dweb.link/
 
 
 ![ui](./screenshots/2burns1remintui.png)  
