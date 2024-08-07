@@ -19,18 +19,19 @@ const wasmContentTypePlugin = {
   },
 };
 
-export default defineConfig(({ command }) => {
-  const rollupOptions = { external: ['@aztec/bb.js'] }
 
-  const config = {
+export default defineConfig(({ command }) => {
+  return {
+    server: {
+      cors: {
+        allowedHeaders: {
+          "Cross-Origin-Embedder-Policy":"require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin"
+        }
+      }
+    },
     build: {
       target: 'esnext',
-      rollupOptions: {
-        // tutorial did:
-        // external: ['@aztec/bb.js']
-        // which breaks vite build
-        external: command === 'serve' ? ['@aztec/bb.js'] : [],
-      }
     },
     optimizeDeps: {
       esbuildOptions: {
@@ -38,13 +39,26 @@ export default defineConfig(({ command }) => {
       }
     },
     plugins: [
-      copy({
-        targets: [{ src: 'node_modules/**/*.wasm', dest: 'node_modules/.vite/dist' }],
-        copySync: true,
-        hook: 'buildStart',
-      }),
+      // copy({
+      //   targets: [{ src: 'node_modules/**/*.wasm', dest: 'node_modules/.vite/dist' }],
+      //   copySync: true,
+      //   hook: 'buildStart',
+      // }),
       command === 'serve' ? wasmContentTypePlugin : [],
+
+      //------ enables multi core proving :DDD
+      {
+        name: "configure-response-headers",
+        configureServer: (server) => {
+          server.middlewares.use((_req, res, next) => {
+            res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+            res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+            next();
+          });
+        },
+      },
+      //-----
+
     ],
   };
-  return config
 });

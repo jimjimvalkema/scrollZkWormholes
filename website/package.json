@@ -13,8 +13,8 @@
   },
   "dependencies": {
     "@aztec/bb.js": "^0.47.1",
-    "@noir-lang/backend_barretenberg": "0.31.0",
-    "@noir-lang/noir_js": "0.31.0",
+    "@noir-lang/backend_barretenberg": "^0.31.0",
+    "@noir-lang/noir_js": "^0.31.0",
     "rollup-plugin-copy": "^3.5.0"
   }
 }

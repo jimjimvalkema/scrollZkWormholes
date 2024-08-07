@@ -208,15 +208,37 @@ async function makeRemintUi({ secret,burnBalance, burnAddress, txHash, from, con
 }
 
 async function creatSnarkProof({ proofInputsNoirJs, circuit = circuit }) {
-  messageUi("NOTICE: noirjs can only use 1 core. This can take 7~10min :/")
+  if (window.crossOriginIsolated === false) {
+    messageUi(`
+      NOTICE: noirjs can only use 1 core because window.crossOriginIsolated = false. This can take 7~10min :/\n
+      This is likely because the server running this has not set it's cors header properly \n
+      They need to be like this: \n
+      <code>
+        ...
+        "Cross-Origin-Embedder-Policy":"require-corp"
+        "Cross-Origin-Opener-Policy":"same-origin"
+        ...
+      </code>
+      `)
+  }
   const backend = new BarretenbergBackend(circuit);
+  
+  //---debug
+  if (window.crossOriginIsolated === true) {
+    messageUi("initializing prover 🤖")
+    await backend.instantiate()
+    messageUi(`
+      wow window.crossOriginIsolated is set to true
+      i can use ${backend.options.threads} cores now 😎
+      `)
+  }
+  //--
+  
   const noir = new Noir(circuit, backend)
 
   // pre noirjs 0.31.0 \/
   //const proof = await noir.generateProof(proofInputsNoirJs);
   const { witness } = await noir.execute(proofInputsNoirJs);
-  const noirexcute =  await noir.execute(proofInputsNoirJs);
-
   const proof = await backend.generateProof(witness);
 
   //TODO remove this debug
