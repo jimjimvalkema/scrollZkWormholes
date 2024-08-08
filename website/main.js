@@ -8,6 +8,16 @@ import { Noir } from '@noir-lang/noir_js';
 
 import { abi as contractAbi } from '../artifacts/contracts/Token.sol/Token.json'
 import { getSafeRandomNumber , getProofInputs, hashNullifier, hashBurnAddress} from '../scripts/getProofInputs'
+messageUi("initializing prover 🤖")
+// messageUi(`<br>\ndebug SharedArrayBuffer: ${typeof SharedArrayBuffer}`, true)
+complainAboutSharedBufferArray()
+const backend = new BarretenbergBackend(circuit);
+const backendInitPromise = backend.instantiate().then(()=>{messageUi("")})
+const noir = new Noir(circuit, backend)
+
+
+
+
 const CONTRACT_ADDRESS = "0x20EF4cC5d68198acacDe4468107314A629522d6E"
 const FIELD_LIMIT = 21888242871839275222246405745257275088548364400416034343698204186575808495617n //using poseidon so we work with 254 bits instead of 256
 const CHAININFO = {
@@ -195,6 +205,12 @@ async function makeRemintUi({ secret,burnBalance, burnAddress, txHash, from, con
       "already reminted"
     )
     li.style.textDecoration = "line-through"
+  } else if (burnBalance === 0n) { 
+    li.append(
+      br(),
+      "no ballance yet. Is the the tx still pending?"
+    )
+    li.style.textDecoration = "line-through"
   } else {
     const remintBtn = document.createElement("button")
     remintBtn.innerText = "remint"
@@ -207,35 +223,49 @@ async function makeRemintUi({ secret,burnBalance, burnAddress, txHash, from, con
   return li
 }
 
-async function creatSnarkProof({ proofInputsNoirJs, circuit = circuit }) {
+function complainAboutSharedBufferArray() {
   if (window.crossOriginIsolated === false) {
     messageUi(`
-      <b>NOTICE</b>: prover can only use <b>1 core</b>. This can take  <b>7~10min :/</b>\n <br>
-      This is because window.crossOriginIsolated = false. <br>
+      \n<br>
+      <b>NOTICE</b>: prover can only use <b>1 core</b> because current site isn't in a cross-origin isolation state. \n <br>
       This is likely because the server running this has not set it's cors header properly \n <br>
-      They need to be like this: \n <br>
+      They need to be set like this: \n <br>
       <code>
         ...<br>
         "Cross-Origin-Embedder-Policy":"require-corp"<br>
         "Cross-Origin-Opener-Policy":"same-origin"<br>
         ...<br>
+      </code> \n<br>
+      \n<br>
+      <b>DEBUG</b>: \n<br>
+      <code>
+      SharedArrayBuffer: ${typeof SharedArrayBuffer} \n<br>
+      window.crossOriginIsolated: ${ window.crossOriginIsolated} \n<br>
+      window.location.origin: ${window.location.origin} \n<br>
+      <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer#security_requirements">https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer#security_requirements</a>
       </code>
-      `)
+      `, true)
   }
-  const backend = new BarretenbergBackend(circuit);
-  
-  //---debug
-  if (window.crossOriginIsolated === true) {
-    messageUi("initializing prover 🤖")
-    await backend.instantiate()
+}
+
+async function createSnarkProof({ proofInputsNoirJs, circuit = circuit }) {
+  if (window.crossOriginIsolated === false) {
+    messageUi(`
+      \n<br>
+      <b>NOTICE</b>: prover can only use <b>1 core</b> 
+      Because current site isn't in a cross-origin isolation state. \n <br>
+      Proving can take <b>7~10min</b> :/
+      `
+    )
+  }
+  await backendInitPromise
+  if (window.crossOriginIsolated) {
     messageUi(`
       wow window.crossOriginIsolated is set to true
       i can use ${backend.options.threads} cores now 😎
       `)
   }
-  //--
-  
-  const noir = new Noir(circuit, backend)
+
 
   // pre noirjs 0.31.0 \/
   //const proof = await noir.generateProof(proofInputsNoirJs);
@@ -263,7 +293,7 @@ async function remintBtnHandler({ to, contract, secret , signer}) {
     console.log({proofInputs})
     const amount = proofInputs.proofData.burnedTokenBalance
 
-    const proof = await creatSnarkProof({ proofInputsNoirJs: proofInputs.noirJsInputs, circuit: circuit })
+    const proof = await createSnarkProof({ proofInputsNoirJs: proofInputs.noirJsInputs, circuit: circuit })
     //console.log({proof})
     
     const remintInputs = {
