@@ -13,7 +13,7 @@ https://sepolia.scrollscan.com/address/0x20EF4cC5d68198acacDe4468107314A629522d6
 ### install
 ```shell
 yarn install;
-yarn install-submodules && yarn compile-contracts && yarn install-submodules;
+yarn install-submodules && yarn compile-contracts && yarn install-submodules && yarn install-vite
 ```
 ### run locally
 ```shell

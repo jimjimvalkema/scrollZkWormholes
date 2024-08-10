@@ -39,11 +39,11 @@ export default defineConfig(({ command }) => {
       }
     },
     plugins: [
-      // copy({
-      //   targets: [{ src: 'node_modules/**/*.wasm', dest: 'node_modules/.vite/dist' }],
-      //   copySync: true,
-      //   hook: 'buildStart',
-      // }),
+      copy({
+        targets: [{ src: 'node_modules/**/*.wasm', dest: 'node_modules/.vite/dist' }],
+        copySync: true,
+        hook: 'buildStart',
+      }),
       command === 'serve' ? wasmContentTypePlugin : [],
 
       //------ enables multi core proving :DDD
