@@ -3,9 +3,9 @@
 import { poseidon1, poseidon2 } from "poseidon-lite";
 import { ethers } from "ethers";
 import * as fs from 'node:fs/promises';
-import { getHashPathFromProof } from "../../scripts/decodeScrollProof.js"
-import { createStoragePositionMapping, getBlockHeaderRlp } from "../../scripts/getScrollProof.js"
-import { ZkTrieNode, NodeTypes, leafTypes } from "../../scripts/types/ZkTrieNode.js";
+import { getHashPathFromProof } from "../submodules/scrollZkStorageProofs/scripts/decodeScrollProof.js"
+import { createStoragePositionMapping, getBlockHeaderRlp } from "../submodules/scrollZkStorageProofs/scripts/getScrollProof.js"
+import { ZkTrieNode, NodeTypes, leafTypes } from "../submodules/scrollZkStorageProofs/scripts/types/ZkTrieNode.js";
 import argParser from 'args-parser'
 
 

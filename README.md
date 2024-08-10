@@ -9,9 +9,20 @@ try it out: https://bafybeih4zlk6jlopnxgectlar7yd7hrp7jovtkk545ktdb2wgdsoa7kf4m.
 
 ### deploymed on scroll sepolia
 https://sepolia.scrollscan.com/address/0x20EF4cC5d68198acacDe4468107314A629522d6E
-## install
+## run ui locally
+### install
 ```shell
-yarn install
+yarn install;
+yarn install-submodules && yarn compile-contracts && yarn install-submodules;
+```
+### run locally
+```shell
+yarn dev
+```
+
+### build static site locally
+```shell
+yarn build
 ```
 
 ## deploy
@@ -117,3 +128,6 @@ modify `../scripts/getScrollProof.js` at getBlockHeaderRlp() for mainnet
 ```
 *at line 259-283 ../scripts/getScrollProof.js*
 *https://github.com/jimjimvalkema/scrollZkStorageProofs/blob/main/scripts/getScrollProof.js#L259*
+
+
+### 

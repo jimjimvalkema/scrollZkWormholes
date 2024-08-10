@@ -22,7 +22,7 @@ const CONTRACT_ADDRESS = "0x20EF4cC5d68198acacDe4468107314A629522d6E"
 const FIELD_LIMIT = 21888242871839275222246405745257275088548364400416034343698204186575808495617n //using poseidon so we work with 254 bits instead of 256
 const CHAININFO = {
   chainId: "0x8274f",
-  rpcUrls: ["https://sepolia-rpc.scroll.io/"],
+  rpcUrls: ["https://scroll-sepolia.drpc.org"],
   chainName: "scroll sepolia",
   nativeCurrency: {
     name: "Ethereum",

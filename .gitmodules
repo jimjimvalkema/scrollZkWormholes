@@ -1,0 +1,3 @@
+[submodule "submodules/scrollZkStorageProofs"]
+	path = submodules/scrollZkStorageProofs
+	url = https://github.com/jimjimvalkema/scrollZkStorageProofs.git
