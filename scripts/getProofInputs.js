@@ -144,13 +144,15 @@ function Bytes(input, len) {
 }
 
 export function hashNullifier(secret) {
-    const hashedSecret = poseidon1([secret]) //basicaly the burn address but withour the striped bytes
-    //return ethers.zeroPadValue(ethers.toBeHex(poseidon2([secret,hashedSecret])),32)
-    return ethers.zeroPadValue(ethers.toBeHex(poseidon2([secret,hashedSecret])),32)
+    const hashedSecret = poseidon1([secret]) 
+    const nullifier = poseidon2([secret,hashedSecret])
+    return ethers.zeroPadValue(ethers.toBeHex(nullifier),32)
 }
 
 export function hashBurnAddress(secret) {
-    return ethers.zeroPadValue(ethers.hexlify(ethers.toBeArray(poseidon1([secret])).slice(0,20)),20)
+    const hash = ethers.toBeArray(poseidon1([secret])) 
+    const burnAddress = hash.slice(0,20)
+    return ethers.zeroPadValue(ethers.hexlify(burnAddress),20)
 }
 /**
  * 
