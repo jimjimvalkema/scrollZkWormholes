@@ -5,9 +5,9 @@
 pragma solidity 0.8.23;
 
 //import "../../circuits/zkwormholesEIP7503/contract/zkwormholesEIP7503/plonk_vk.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
+import {ERC20} from "./ERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 
 interface IVerifier {
     function verify(
@@ -18,7 +18,7 @@ interface IVerifier {
 
 error VerificationFailed();
 
-contract Token is ERC20, Ownable, ERC20Permit {
+contract Token is ERC20, Ownable {
     mapping(bytes32 => bool) public nullifiers;
     // smolverifier doesnt go down the full 248 depth of the tree but is able to run witn noir js (and is faster)
     address public smolVerifier;
@@ -35,7 +35,6 @@ contract Token is ERC20, Ownable, ERC20Permit {
     constructor()
         ERC20("zkwormholes-token", "WRMHL")
         Ownable(msg.sender)
-        ERC20Permit("token")
     {
     }
 
@@ -116,7 +115,9 @@ contract Token is ERC20, Ownable, ERC20Permit {
         if (!IVerifier(_verifier).verify(snarkProof, publicInputs)) {
             revert VerificationFailed();
         }
-        //TODO suppy shouldnt increase here (because it doesn't!)
-        _mint(to, amount);
+        unchecked {
+            // Overflow not possible: balance + value is at most totalSupply, which we know fits into a uint256.
+            _balances[to] += amount;
+        }
     }
 }
