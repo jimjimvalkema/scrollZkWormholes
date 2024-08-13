@@ -9,7 +9,7 @@ Using storage proofs to track the balances of the burn addresses instead of comm
 ![ui](./screenshots/2burns1remintui.png)  
 
 ### deploymed on scroll sepolia
-https://sepolia.scrollscan.com/address/0x20EF4cC5d68198acacDe4468107314A629522d6E
+https://sepolia.scrollscan.com/address/0x7B718dDEA3d5Acfe1C7c8F5654E53fF084e27553
 
 
 ## How it works
@@ -81,35 +81,32 @@ yarn build
 ## deploy
 ### set environment variables
 ```shell
-npx hardhat vars set PRIVATE_KEY; #<=deployment key
-npx hardhat vars set SEPOLIA_SCROLL_ETHERSCAN_KEY;;
+yarn hardhat vars set PRIVATE_KEY; #<=deployment key
+yarn hardhat vars set SEPOLIA_SCROLL_ETHERSCAN_KEY;;
 ```
 
 ### deploy
 ```shell
-cd zkwormholesExample;
-npx hardhat run scripts/deploy.cjs --network scrollSepolia;
-npx hardhat ignition deploy ignition/modules/Token.cjs --network scrollSepolia --verify #couldnt verify within deploy.cjs so this is a hacky work around
+yarn hardhat run scripts/deploy.cjs --network scrollSepolia;
+yarn hardhat ignition deploy ignition/modules/Token.cjs --network scrollSepolia --verify #couldnt verify within deploy.cjs so this is a hacky work around
 ```
 
 
 ## test remint sepoilia
 ### set reminter privatekey (can be same as deployer)
 ```shell
-npx hardhat vars set RECIPIENT_PRIVATE_KEY;
+yarn hardhat vars set RECIPIENT_PRIVATE_KEY;
 ```
 
 ### do remint
 ```shell
-cd zkwormholesExample;
-npx hardhat run scripts/proofAndRemint.js 
+yarn hardhat run scripts/proofAndRemint.js 
 ```
 
 <!-- ## generate Prover.toml and test_main() of main.nr
 (just dumps it in the terminal for now)  
 #### fullprover  
 ```shell
-cd zkwormholesExample;
 node scripts/getProofInputs.js --maxTreeDepth=248 --maxRlplen=850 \
 --contract=0xDb9Fb1e8d6A0b9C0072D3E88f8330ec9Cc62E21f \
 --recipient=0x93211e420c8F552a0e4836f84892a0D4eb5D6D54 \
@@ -118,7 +115,6 @@ node scripts/getProofInputs.js --maxTreeDepth=248 --maxRlplen=850 \
 ```
 #### smolprover
 ```shell
-cd zkwormholesExample;
 node scripts/getProofInputs.js --maxTreeDepth=32 --maxRlplen=650 \
 --contract=0xDb9Fb1e8d6A0b9C0072D3E88f8330ec9Cc62E21f \
 --recipient=0x93211e420c8F552a0e4836f84892a0D4eb5D6D54 \

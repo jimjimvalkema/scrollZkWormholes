@@ -5,4 +5,4 @@ authors = [""]
 compiler_version = ">=0.31.0"
 
 [dependencies]
-ScrollStorageProver = { path = "../../../circuits/lib/" }
+ScrollStorageProver = { path = "../../submodules/scrollZkStorageProofs/circuits/lib/" }

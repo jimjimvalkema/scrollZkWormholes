@@ -12,10 +12,10 @@ global MAX_RLP_SIZE = 850;//1000; //should be enough scroll mainnet wasn't going
 // TODO actually find out what the largest value could be 
 
 
-global PADDED_CONTRACT_ADDRESS = [32,239,76,197,214,129,152,172,172,222,68,104,16,115,20,166,41,82,45,110,0,0,0,0,0,0,0,0,0,0,0,0];
+global PADDED_CONTRACT_ADDRESS = [123,113,141,222,163,213,172,254,28,124,143,86,84,229,63,240,132,226,117,83,0,0,0,0,0,0,0,0,0,0,0,0];
 global BALANCES_SLOT = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
-global COMPRESSED_KECCAK_CODE_HASH = 0x0614d811ed4ae0100b1be9d4c4c661e17fcfcde6dbf22a56d7006e84648dd21a;
-global POSEIDON_CODE_HASH = 0x2ea440a83444a9a127efe8ee9e4b6edb87b803bdb69a6e95bab76cb8b460dd99;
+global COMPRESSED_KECCAK_CODE_HASH = 0x0e1d42ab26af640fcf7451fab29af95616cde87b281b5d02cd6e5442a97fc1cb;
+global POSEIDON_CODE_HASH = 0x0277abf217dc9e025e3cd539f1d9d366849a59648dcbae8a7441eb65aeaf4c0a;
 
 
 struct Storage_proof_data {
