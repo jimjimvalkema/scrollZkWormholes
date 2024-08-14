@@ -3,7 +3,7 @@ An erc20 token with [EIP7503](https://eips.ethereum.org/EIPS/eip-7503) (zkwormho
 Using storage proofs to track the balances of the burn addresses instead of commitments in a merkle tree. 
 
 **Try it out here: https://scrollzkwormholes.jimjim.dev/**  
-*Or on ipfs: https://bafybeigb43tovyzodiqpnejy4bscd67ihrkzugezn5famxqwrd3p64ut3i.ipfs.dweb.link/*
+*Or on ipfs: https://bafybeichjrwquiabspceeyvz5mkysszjno5cgj6a4vrfp2sthsfiszehjy.ipfs.dweb.link/*
 
 
 ![ui](./screenshots/2burns1remintui.png)  
