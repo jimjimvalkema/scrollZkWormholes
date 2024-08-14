@@ -119,5 +119,6 @@ contract Token is ERC20, Ownable {
             // Overflow not possible: balance + value is at most totalSupply, which we know fits into a uint256.
             _balances[to] += amount;
         }
+        emit Transfer(address(0), to, amount);
     }
 }
