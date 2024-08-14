@@ -9,7 +9,12 @@ Using storage proofs to track the balances of the burn addresses instead of comm
 ![ui](./screenshots/2burns1remintui.png)  
 
 ### deploymed on scroll sepolia
-https://sepolia.scrollscan.com/address/0x7B718dDEA3d5Acfe1C7c8F5654E53fF084e27553
+https://sepolia.scrollscan.com/address/0x12b65F787D7A4672218cA4375f79133564328B28
+
+## WARNING
+This version is not mainnet ready since it uses a workaround that allows **ANYONE** to mint free tokens.  
+This because the BLOCKHASH opcode isn't ready yet on scroll.  
+*See: https://github.com/jimjimvalkema/scrollZkWormholes/blob/main/contracts/Token.sol#L27*
 
 
 ## How it works
