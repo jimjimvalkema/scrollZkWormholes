@@ -294,25 +294,27 @@ async function remintBtnHandler({ to, contract, secret , signer}) {
     const amount = proofInputs.proofData.burnedTokenBalance
 
     const proof = await createSnarkProof({ proofInputsNoirJs: proofInputs.noirJsInputs, circuit: circuit })
+    console.log({proof})
     //console.log({proof})
     
     const remintInputs = {
       to,
       amount,
       blockNumber, //blockNumber: BigInt(proofInputs.blockData.block.number),
-      nullifier: ethers.toBeHex(proofInputs.proofData.nullifier),
+      nullifier: ethers.zeroPadValue(proofInputs.proofData.nullifier, 32),
       snarkProof: ethers.hexlify(proof.proof),
 
     }
     // console.log("------------remint tx inputs----------------")
     console.log({ remintInputs })
     // console.log("---------------------------------------")
-
+    messageUi("now sign the 2 transactions the `setBlockHash` and `reMint` tx. \n<br> Note: setBlockHash is a workaround since scroll doesnt support the BLOCKHASH opcode yet")
     const setBlockHashTx = await contract.setBlockHash(proofInputs.blockData.block.hash,remintInputs.blockNumber)
     await putTxInUi(await setBlockHashTx)
-    messageUi("\n waiting for 2 confirmations for `setBlockHash` transaction to confirm\n after that you can finally remint!!!",true)
-    await setBlockHashTx.wait(2)
-    const remintTx =await contract.reMint(remintInputs.to, remintInputs.amount, remintInputs.blockNumber, remintInputs.nullifier, remintInputs.snarkProof)
+    messageUi("\n waiting for 1 confirmations for `setBlockHash` transaction to confirm\n<br> after that you can finally remint!!!",true)
+    await setBlockHashTx.wait(1)
+    await new Promise(resolve => setTimeout(resolve, 500))
+    const remintTx = await contract.reMint(remintInputs.to, remintInputs.amount, remintInputs.blockNumber, remintInputs.nullifier, remintInputs.snarkProof)
     await putTxInUi(await remintTx)
     await remintTx.wait(1)
 
