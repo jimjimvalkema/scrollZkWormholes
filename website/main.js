@@ -6,7 +6,7 @@ import { BarretenbergBackend, BarretenbergVerifier as Verifier } from '@noir-lan
 import { Noir } from '@noir-lang/noir_js';
 
 
-import { abi as contractAbi } from '../artifacts/contracts/Token.sol/Token.json'
+import { abi as contractAbi } from "./abis/Token.json"//'../artifacts/contracts/Token.sol/Token.json'
 import { getSafeRandomNumber , getProofInputs, hashNullifier, hashBurnAddress} from '../scripts/getProofInputs'
 messageUi("initializing prover 🤖")
 // messageUi(`<br>\ndebug SharedArrayBuffer: ${typeof SharedArrayBuffer}`, true)
@@ -22,7 +22,7 @@ const CONTRACT_ADDRESS = "0x12b65F787D7A4672218cA4375f79133564328B28"
 const FIELD_LIMIT = 21888242871839275222246405745257275088548364400416034343698204186575808495617n //using poseidon so we work with 254 bits instead of 256
 const CHAININFO = {
   chainId: "0x8274f",
-  rpcUrls: ["https://scroll-sepolia.drpc.org"],
+  rpcUrls: ["https://sepolia-rpc.scroll.io"],
   chainName: "scroll sepolia",
   nativeCurrency: {
     name: "Ethereum",

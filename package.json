@@ -8,7 +8,7 @@
     "vite": "^5.3.4"
   },
   "scripts": {
-    "compile-contracts": "hardhat compile",
+    "compile-contracts": "hardhat compile; cp artifacts/contracts/Token.sol/Token.json website/abis/Token.json",
     "compile-circuits": "cd circuits/fullProver; nargo compile && cd circuits/smolProver; nargo compile",
     "install-submodules": "git submodule update --init --recursive;",
     "dev": "cd website; yarn vite",

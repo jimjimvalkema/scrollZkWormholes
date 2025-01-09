@@ -71,8 +71,9 @@ The original EIP doesn't specify this but there are a number of features i like 
 ### install
 ```shell
 yarn install;
-yarn install-submodules && yarn compile-contracts && yarn install-vite
+yarn install-submodules && yarn install-vite;
 ```
+
 ### run locally
 ```shell
 yarn dev
@@ -87,7 +88,8 @@ yarn build
 ### set environment variables
 ```shell
 yarn hardhat vars set PRIVATE_KEY; #<=deployment key
-yarn hardhat vars set SEPOLIA_SCROLL_ETHERSCAN_KEY;;
+yarn hardhat vars set SEPOLIA_SCROLL_ETHERSCAN_KEY;
+yarn compile-contracts;
 ```
 
 ### deploy
@@ -106,6 +108,25 @@ yarn hardhat vars set RECIPIENT_PRIVATE_KEY;
 ### do remint
 ```shell
 yarn hardhat run scripts/proofAndRemint.js 
+```
+
+
+## test circuit
+Install noir
+```shell
+curl -L https://raw.githubusercontent.com/noir-lang/noirup/refs/heads/main/install | bash
+noirup -v 0.31.0
+```
+
+Run test
+```shell
+cd circuits/smolProver;
+nargo test;
+```
+
+Compile circuit (verifier contracts are created in `scripts/deploy.cjs`)
+```shell
+yarn compile-circuits 
 ```
 
 <!-- ## generate Prover.toml and test_main() of main.nr

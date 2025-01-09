@@ -13,7 +13,7 @@ import { poseidon1, poseidon2 } from "poseidon-lite";
 
 // project imports
 import { formatTest, getProofInputs, formatToTomlProver,getSafeRandomNumber } from "./getProofInputs.js"
-import circuit from '../circuits/smolProver/target/zkwormholesEIP7503.json'  assert {type: 'json'};
+import circuit from '../circuits/smolProver/target/zkwormholesEIP7503.json'  with { type: "json" }; //assert {type: 'json'};
 
 //---- node trips up on the # in the file name. This is a work around----
 //import {tokenAbi } from "../ignition/deployments/chain-534351/artifacts/TokenModule#Token.json" assert {type: 'json'};
@@ -116,7 +116,7 @@ async function main() {
     // --------------
 
     // --------------provider---------------
-    const PROVIDERURL = "https://scroll-sepolia.drpc.org"
+    const PROVIDERURL = "https://sepolia-rpc.scroll.io/"
     const provider = new ethers.JsonRpcProvider(PROVIDERURL)
     // --------------
 
