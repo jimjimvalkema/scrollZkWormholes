@@ -39,27 +39,24 @@ struct Contract_proof_data {
 fn get_burn_address(secret: Field) -> [u8;32] {
     let hash:[u8] = poseidon::bn254::hash_1([secret]).to_be_bytes(32);//.as_array();
     let mut burn_address:[u8;32] = [0;32];
-    // replace last 12 bytes with zero since address is only 20 bytes
+
+    // replace last 12 bytes with zero since address is only 20 bytes (noir doesnt support a nicer method hence whacky for loop)
     for index in 0 .. 20 {
         burn_address[index+12] = hash[index];   
     }
     burn_address
 }
 
-fn hash_nullifier(nonce: Field,secret: Field) -> Field {
+// nonce makes sure the hash is never the same even when the amount is different
+// secret is so others cant try and find the pre-image (since this hash is posted onchain)
+fn hash_nullifier(amount: Field, nonce:Field, secret: Field) -> Field {
+    poseidon::bn254::hash_3([amount,nonce,secret])
+}
+
+// nonce makes sure the hash is never the same even when the amount is different
+// secret is so others cant try and find the pre-image (since this hash is posted onchain)
+fn hash_nullifier_id(nonce:Field, secret: Field) -> Field {
     poseidon::bn254::hash_2([nonce,secret])
-}
-
-fn encrypt(secret: Field, data: Field) -> Field {
-    //TODO
-    println("encrypt not implemented");
-    0x0
-}
-
-fn decrypt(secret: Field, data: Field) -> Field {
-    //TODO
-    println("decrypt not implemented");
-    0x0
 }
 
 
@@ -67,16 +64,17 @@ fn main(
         //----- public inputs
         remint_address:pub Field, // the address to re-mint to
         withdraw_amount: pub Field,
-        new_spend_amount_encrypted: pub Field,
-        new_nullifier:pub Field,
+        nullifier: pub Field,
+        nullifier_id:pub Field,
         block_hash:pub [u8;32], 
         
         //-----very privacy sensitive data -----
         secret: Field, //burnaddress is derived from secret // TODO instead of using a secrets use public cryptography shit so hardware wallets dont have to create a whole ass proof. Also makes complexity lower for hot wallets to ensure safety and better compatability with metamasksnap.
-        burned_balance: [u8;32],  //TODO split into fields constraint golf
+        burned_balance: [u8;32],  //TODO split into fields constraint golf or just as a field (also gas golf) (assumes a balance never > FIELD_LIMIT)
         burn_addr_storage_proof: Hash_paths_state_proof<MAX_HASH_PATH_SIZE,MAX_HASH_PATH_SIZE>,
         nonce: Field, // nonce to create a nulliefier from to track encrypted spend_amounts
-        prev_spend_amount_encrypted: Field,
+        prev_nullifier_id: Field, // just here for the storage proof of prev_nullifier, since prev_nullifier already contains all info
+        prev_spend_amount: Field,
         prev_nullifier_storage_proof: Hash_paths_state_proof<MAX_HASH_PATH_SIZE,MAX_HASH_PATH_SIZE>,
         
         // ---- insensitive data (is private to reduce gas) --
@@ -108,31 +106,31 @@ fn main(
     assert(bytes32_to_field(state_root_rlp) == state_root_burn_addr, "computed state root from the burn address merkle proof doesnt match the one from the block header rlp"); 
     
     //--------prev nullifier------------
-    let mut prev_spend_amount: Field = 0;
     if (nonce != 0) {
         // verify that the nullifier exist onchain with a storage proof
-        // cant do this outside the circuit since that links prev_nullifier with the new_nullifier
-        let prev_nullifier: [u8;32] = hash_nullifier(nonce-1,secret).to_be_bytes(32).as_array();
-        let state_root_prev_nullifier = storage_proof_on_mapping(prev_nullifier, BALANCES_SLOT, prev_spend_amount_encrypted.to_be_bytes(32).as_array(), PADDED_CONTRACT_ADDRESS, prev_nullifier_storage_proof, contract_account_preimage);
-        assert(bytes32_to_field(state_root_rlp) == state_root_prev_nullifier, "computed state root from the prev_nullifier merkle proof doesnt match the one from the block header rlp");
+        // cant do this outside the circuit since that links prev_nullifier_id with the nullifier_id
+        let prev_nullifier: [u8;32] = hash_nullifier(prev_spend_amount,nonce-1,secret).to_be_bytes(32).as_array();
+        let state_root_prev_nullifier_id = storage_proof_on_mapping(prev_nullifier_id.to_be_bytes(32).as_array(), BALANCES_SLOT, prev_nullifier, PADDED_CONTRACT_ADDRESS, prev_nullifier_storage_proof, contract_account_preimage);
+        assert(bytes32_to_field(state_root_rlp) == state_root_prev_nullifier_id, "computed state root from the prev_nullifier_id merkle proof doesnt match the one from the block header rlp");
         
-        prev_spend_amount = decrypt(secret, prev_spend_amount_encrypted);
     } else {
-        // we dont need to check prev_nullifier since it doenst exist and we can keep prev_spend_amount at 0
+        // we dont need to check prev_nullifier_id since it doenst exist and we can keep prev_spend_amount at 0
+        // TODO make the nullifier proof a recursive proof so the first tx is ~2x faster to proof
     }
     
     // ----- new_spend_amount-------------
+    // @WARNING TODO watch out for overflows (solution?: make sure max supply of coin is < FIELD_LIMIT inside contract)
     let new_spend_amount: Field = withdraw_amount + prev_spend_amount;
     //new_spend_amount < burned_balance
     // TODO this burns 1 wei because i cant do <=
     // should i just do new_spend_amount == new_spend_amount || secret < new_spend_amount
     std::field::bn254::assert_lt(new_spend_amount,bytes32_to_field(burned_balance));
-    let computed_new_spend_amount_encrypted: Field = encrypt(secret, new_spend_amount);
-    assert(computed_new_spend_amount_encrypted == new_spend_amount_encrypted, "public input: new_spend_amount_encrypted, doesnt match the one computed in the circuit");
+    let computed_nullifier: Field = hash_nullifier(new_spend_amount,nonce,secret);
+    assert(computed_nullifier == nullifier, "public input: nullifier, doesnt match the one computed in the circuit");
 
-    // ----- new_nullifier -------------
-    let computed_new_nullifier = hash_nullifier(nonce,secret);
-    assert(computed_new_nullifier == new_nullifier, "computed nullifier doesnt match provided nullifier");
+    // ----- nullifier_id -------------
+    let computed_nullifier_id = hash_nullifier_id(nonce,secret);
+    assert(computed_nullifier_id == nullifier_id, "computed nullifier doesnt match provided nullifier");
 }
 
 #[test]
@@ -140,7 +138,7 @@ fn test_hashing() {
     let nonce = 0;
     let secret = 123;
     let address = get_burn_address(secret);
-    let nullifier = hash_nullifier(nonce,secret);
+    let nullifier = hash_nullifier_id(nonce,secret);
     println(address);
     println(nullifier);
 }
