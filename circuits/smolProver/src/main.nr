@@ -15,10 +15,11 @@ global MAX_RLP_SIZE = 650;//1000; //should be enough scroll mainnet wasn't going
 // TODO actually find out what the largest value could be 
 
 
-global PADDED_CONTRACT_ADDRESS = [18,182,95,120,125,122,70,114,33,140,164,55,95,121,19,53,100,50,139,40,0,0,0,0,0,0,0,0,0,0,0,0];
+global PADDED_CONTRACT_ADDRESS = [225,130,151,123,35,41,111,253,187,206,234,214,141,215,108,62,166,127,68,127,0,0,0,0,0,0,0,0,0,0,0,0];// 0xe182977b23296ffdbbceead68dd76c3ea67f447f000000000000000000000000
 global BALANCES_SLOT = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
-global COMPRESSED_KECCAK_CODE_HASH = 0x1dfc3016ce6256802e16d9124afb52f41291a6bf29697a4e6bf1b76be2f2d62c;
-global POSEIDON_CODE_HASH = 0x18531aae70f67481b2d8785fafd0072fd12132744350dadfbc9a12a34295c562;
+global PARTIAL_NULLIFIERS_SLOT = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6];
+global COMPRESSED_KECCAK_CODE_HASH = 0x20005f9e60e77f484982af58de155585fb1ac65530a7d5a8418d6a5ad0bfab92;
+global POSEIDON_CODE_HASH = 0x239851df34491459b1117506c3aa820ff5bc9829b7bb07dbee4498dc8ea9086e;
 
 
 struct Storage_proof_data {
@@ -59,7 +60,7 @@ fn hash_nullifier_id(nonce:Field, secret: Field) -> Field {
     poseidon::bn254::hash_2([nonce,secret])
 }
 
-
+//TODO check if its okay id prevNullifier id maps to a nullfier which is 0x000000000
 fn main(
         //----- public inputs
         remint_address:pub Field, // the address to re-mint to
@@ -71,10 +72,10 @@ fn main(
         //-----very privacy sensitive data -----
         secret: Field, //burnaddress is derived from secret // TODO instead of using a secrets use public cryptography shit so hardware wallets dont have to create a whole ass proof. Also makes complexity lower for hot wallets to ensure safety and better compatability with metamasksnap.
         burned_balance: [u8;32],  //TODO split into fields constraint golf or just as a field (also gas golf) (assumes a balance never > FIELD_LIMIT)
-        burn_addr_storage_proof: Hash_paths_state_proof<MAX_HASH_PATH_SIZE,MAX_HASH_PATH_SIZE>,
         nonce: Field, // nonce to create a nulliefier from to track encrypted spend_amounts
         prev_nullifier_id: Field, // just here for the storage proof of prev_nullifier, since prev_nullifier already contains all info
         prev_spend_amount: Field,
+        burn_addr_storage_proof: Hash_paths_state_proof<MAX_HASH_PATH_SIZE,MAX_HASH_PATH_SIZE>,
         prev_nullifier_storage_proof: Hash_paths_state_proof<MAX_HASH_PATH_SIZE,MAX_HASH_PATH_SIZE>,
         
         // ---- insensitive data (is private to reduce gas) --
@@ -91,17 +92,24 @@ fn main(
 
     //-------------- account preimage--------------
     let contract_account_preimage = Account_preimage_excl_storage { // = the whole account leaf preimage except storage hash since we need to compute it later here
-        compressed_keccak_code_hash:COMPRESSED_KECCAK_CODE_HASH, // cannot be change afaik unless maybe self destruct but that is silly
-        poseidon_code_hash:         POSEIDON_CODE_HASH, // 
-        nonce_codesize_0:           contract_data.nonce_codesize_0, //storage_proof_data.nonce_codesize_0, // only changes if the contract creates another contract: https://ethereum.org/en/developers/docs/accounts/#an-account-examined
-        balance:                    contract_data.balance //storage_proof_data.contract_balance, // always changes            
+        compressed_keccak_code_hash:    COMPRESSED_KECCAK_CODE_HASH, // cannot be change afaik unless maybe self destruct but that is silly
+        poseidon_code_hash:             POSEIDON_CODE_HASH, // 
+        nonce_codesize_0:               contract_data.nonce_codesize_0, //storage_proof_data.nonce_codesize_0, // only changes if the contract creates another contract: https://ethereum.org/en/developers/docs/accounts/#an-account-examined
+        balance:                        contract_data.balance //storage_proof_data.contract_balance, // always changes            
     }; 
 
     //------------ state proof of mapping(burn_address -> burned_balance) ------------
     // burn_address = our secret commitment
     let burn_address:[u8;32] = get_burn_address(secret);
     // check burned_balance and burn_address with a storage proof
-    let state_root_burn_addr = storage_proof_on_mapping(burn_address, BALANCES_SLOT, burned_balance, PADDED_CONTRACT_ADDRESS, burn_addr_storage_proof, contract_account_preimage);
+    let state_root_burn_addr = storage_proof_on_mapping(
+        burn_address, 
+        BALANCES_SLOT, 
+        burned_balance, 
+        PADDED_CONTRACT_ADDRESS, 
+        burn_addr_storage_proof, 
+        contract_account_preimage
+    );
     //TODO use bytes32_to_field once
     assert(bytes32_to_field(state_root_rlp) == state_root_burn_addr, "computed state root from the burn address merkle proof doesnt match the one from the block header rlp"); 
     
@@ -110,7 +118,16 @@ fn main(
         // verify that the nullifier exist onchain with a storage proof
         // cant do this outside the circuit since that links prev_nullifier_id with the nullifier_id
         let prev_nullifier: [u8;32] = hash_nullifier(prev_spend_amount,nonce-1,secret).to_be_bytes(32).as_array();
-        let state_root_prev_nullifier_id = storage_proof_on_mapping(prev_nullifier_id.to_be_bytes(32).as_array(), BALANCES_SLOT, prev_nullifier, PADDED_CONTRACT_ADDRESS, prev_nullifier_storage_proof, contract_account_preimage);
+        
+        let state_root_prev_nullifier_id = storage_proof_on_mapping(
+            prev_nullifier_id.to_be_bytes(32).as_array(), 
+            PARTIAL_NULLIFIERS_SLOT, 
+            prev_nullifier, 
+            PADDED_CONTRACT_ADDRESS, 
+            prev_nullifier_storage_proof, 
+            contract_account_preimage
+        );
+
         assert(bytes32_to_field(state_root_rlp) == state_root_prev_nullifier_id, "computed state root from the prev_nullifier_id merkle proof doesnt match the one from the block header rlp");
         
     } else {

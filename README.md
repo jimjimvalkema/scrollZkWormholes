@@ -68,6 +68,9 @@ The original EIP doesn't specify this but there are a number of features i like 
 **improve proving time:** with proof recursion and a `historicStorageRoots` in a public mapping in the contract.  
 
 ## run ui locally
+<!--
+TODO put all install shit here
+-->
 ### install
 ```shell
 yarn install;
@@ -89,7 +92,7 @@ yarn build
 ```shell
 yarn hardhat vars set PRIVATE_KEY; #<=deployment key
 yarn hardhat vars set SEPOLIA_SCROLL_ETHERSCAN_KEY;
-yarn compile-contracts;
+yarn compile-contracts; #why??
 ```
 
 ### deploy
@@ -113,9 +116,21 @@ yarn hardhat run scripts/proofAndRemint.js
 
 ## test circuit
 Install noir
+nargo
 ```shell
-curl -L https://raw.githubusercontent.com/noir-lang/noirup/refs/heads/main/install | bash
-noirup -v 0.31.0
+curl -L https://raw.githubusercontent.com/noir-lang/noirup/refs/heads/main/install | bash;
+noirup -v 0.31.0;
+```
+barretenberg
+```shell
+curl -L https://raw.githubusercontent.com/AztecProtocol/aztec-packages/refs/heads/master/barretenberg/bbup/install | bash;
+bbup -nv 0.31.0;
+sudo apt install libc++-dev;
+```
+
+get storage slots layout
+```shell
+forge inspect contracts/Token.sol:Token storage --pretty > contracts/storagelayouts/Token.txt
 ```
 
 Run test
