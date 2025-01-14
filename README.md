@@ -9,7 +9,7 @@ Using storage proofs to track the balances of the burn addresses instead of comm
 ![ui](./screenshots/2burns1remintui.png)  
 
 ### deploymed on scroll sepolia
-https://sepolia.scrollscan.com/address/0x12b65F787D7A4672218cA4375f79133564328B28
+https://sepolia.scrollscan.com/address/0xE182977B23296FFdBbcEeAd68dd76c3ea67f447F
 
 ## WARNING
 This version is not mainnet ready since it uses a workaround that allows **ANYONE** to mint free tokens.  
@@ -149,7 +149,7 @@ yarn compile-circuits
 #### fullprover  
 ```shell
 node scripts/getProofInputs.js --maxTreeDepth=248 --maxRlplen=850 \
---contract=0xDb9Fb1e8d6A0b9C0072D3E88f8330ec9Cc62E21f \
+--contract=0xE182977B23296FFdBbcEeAd68dd76c3ea67f447F \
 --recipient=0x93211e420c8F552a0e4836f84892a0D4eb5D6D54 \
 --secret=123 \
 --rpc=https://scroll-sepolia.drpc.org 
@@ -157,7 +157,7 @@ node scripts/getProofInputs.js --maxTreeDepth=248 --maxRlplen=850 \
 #### smolprover
 ```shell
 node scripts/getProofInputs.js --maxTreeDepth=32 --maxRlplen=650 \
---contract=0xDb9Fb1e8d6A0b9C0072D3E88f8330ec9Cc62E21f \
+--contract=0xE182977B23296FFdBbcEeAd68dd76c3ea67f447F \
 --recipient=0x93211e420c8F552a0e4836f84892a0D4eb5D6D54 \
 --secret=123 \
 --rpc=https://scroll-sepolia.drpc.org \
