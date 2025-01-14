@@ -5,14 +5,14 @@ const fs = require("fs/promises");
 const { ethers } = require('ethers');
 const path = require( 'path');
 const  {poseidon2}  = require("poseidon-lite-with-domain")
+const {paddArray} = require("./getProofInputs.js")
 const HASH_DOMAIN_ELEMS_BASE = 256;
 const HASH_DOMAIN_BYTE32     = 2 * HASH_DOMAIN_ELEMS_BASE;
 const SOLIDITY_VERSION = "0.8.23"
 
 async function setContractCircuit(contract="0x794464c8c91A2bE4aDdAbfdB82b6db7B1Bb1DBC7", filePath, solidityVerifierDestination, newContractName, provider) {
     const {compressedKeccakCodeHash, poseidonCodeHash} = await getCodeHashes(contract,provider)
-    const paddedContractArr = [...ethers.toBeArray(contract), ...Array(32-20).fill(0)]
-    
+    const paddedContractArr = paddArray([...ethers.toBeArray(contract), ...Array(32-20).fill(0)], 32, 0, true )
 
     const file = await fs.open(filePath, "r")
     let newFile = ""
@@ -22,8 +22,8 @@ async function setContractCircuit(contract="0x794464c8c91A2bE4aDdAbfdB82b6db7B1B
         if (line.startsWith("global PADDED_CONTRACT_ADDRESS")) {   
             //TODO poseidon code hash compressed keccak code hash
             console.log(line)
-            console.log(`global PADDED_CONTRACT_ADDRESS = [${paddedContractArr}];\n`)
-            newFile += `global PADDED_CONTRACT_ADDRESS = [${paddedContractArr}];\n`
+            console.log(`global PADDED_CONTRACT_ADDRESS = [${paddedContractArr}];/\/\ ${ethers.hexlify(new Uint8Array(paddedContractArr))}\n`)
+            newFile += `global PADDED_CONTRACT_ADDRESS = [${paddedContractArr}];/\/\ ${ethers.hexlify(new Uint8Array(paddedContractArr))}\n`
         } else if (line.startsWith("global POSEIDON_CODE_HASH =")) {
             console.log(line)
             console.log(`global POSEIDON_CODE_HASH = ${poseidonCodeHash};\n`)

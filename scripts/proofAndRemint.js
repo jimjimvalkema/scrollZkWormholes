@@ -12,7 +12,7 @@ import { ethers } from 'ethers';
 import { poseidon1, poseidon2 } from "poseidon-lite";
 
 // project imports
-import { formatTest, getProofInputs, formatToTomlProver,getSafeRandomNumber } from "./getProofInputs.js"
+import { formatTest, getProofInputs, formatToTomlProver,getSafeRandomNumber,hashBurnAddress } from "./getProofInputs.js"
 import circuit from '../circuits/smolProver/target/zkwormholesEIP7503.json'  with { type: "json" }; //assert {type: 'json'};
 
 //---- node trips up on the # in the file name. This is a work around----
@@ -74,9 +74,11 @@ async function setBlockHash({ blockHash, blockNumber, contract }) {
     return setBlockHashTx
 }
 
-async function remint({ to, amount, blockNumber,nullifier, snarkProof, contract }) {
+async function remint({ to, amount, blockNumber,nullifierId, nullifier, snarkProof, contract }) {
     // verify on chain and reMint!
-    const remintTx = await contract.reMint(to, amount, blockNumber,nullifier, snarkProof)
+    console.log("reminting with call args:")
+    console.log({to, amount, blockNumber,nullifierId,nullifier, snarkProof})
+    const remintTx = await contract.reMint(to, amount, blockNumber,nullifierId,nullifier, snarkProof)
     return remintTx
 }
 
@@ -112,7 +114,7 @@ function printTestFileInputs({ proofInputs, secret, recipientWallet, maxHashPath
 }
 
 async function main() {
-    const CONTRACT_ADDRESS = "0x12b65F787D7A4672218cA4375f79133564328B28"
+    const CONTRACT_ADDRESS = "0xE182977B23296FFdBbcEeAd68dd76c3ea67f447F"
     // --------------
 
     // --------------provider---------------
@@ -135,27 +137,30 @@ async function main() {
 
     //---------------burn -------------------
     // mint fresh tokens (normal mint)
-    const burnValue = 420000000000000000000n
-    const secret = getSafeRandomNumber();
+    const burnAmount = 420000000000000000000n
+    const remintAmount = 22200000000000000n
+    const secret = 13093675745686700816186364422135239860302335203703094897030973687686916798500n//getSafeRandomNumber();
+    const burnAddress = hashBurnAddress(secret)
 
     //mint
-    const mintTx = await mint({ to: deployerWallet.address, amount: burnValue, contract: contractDeployerWallet })
-    console.log({ mintTx: (await mintTx.wait(1)).hash })
-
+    // const mintTx = await mint({ to: deployerWallet.address, amount: burnAmount, contract: contractDeployerWallet })
+    // console.log({ mintTx: (await mintTx.wait(1)).hash })
+    
     // burn
-    const { burnTx, burnAddress } = await burn({ secret, amount: burnValue, contract: contractDeployerWallet })
-    console.log({ burnAddress, burnTx: (await burnTx.wait(3)).hash }) // could wait less confirmation but
-
+    // const { burnTx } = await burn({ secret, amount: burnAmount, contract: contractDeployerWallet })
+    // console.log({ burnAddress, burnTx: (await burnTx.wait(3)).hash }) // could wait less confirmation but
 
     // get storage proof
     const blockNumber = BigInt(await provider.getBlockNumber("latest"))
-    const proofInputs = await getProofInputs(CONTRACT_ADDRESS, blockNumber, recipientWallet.address, secret, provider, MAX_HASH_PATH_SIZE, MAX_RLP_SIZE)
+    const proofInputs = await getProofInputs(CONTRACT_ADDRESS, blockNumber, remintAmount, recipientWallet.address, secret, provider, MAX_HASH_PATH_SIZE, MAX_RLP_SIZE)
 
 
     console.log("------------proof input json----------------")
     console.log({ noirJsInputs: proofInputs.noirJsInputs })
+    //console.log(JSON.stringify(proofInputs.noirJsInputs, null, 2) )
+
     console.log("---------------------------------------")
-    printTestFileInputs({proofInputs, secret,recipientWallet})
+    //printTestFileInputs({proofInputs, secret,recipientWallet})
 
     // get snark proof
     const proof = await creatSnarkProof({ proofInputsNoirJs: proofInputs.noirJsInputs, circuit: circuit })
@@ -173,9 +178,10 @@ async function main() {
     //remint
     const remintInputs = {
         to: RECIPIENT_ADDRESS,
-        amount: proofInputs.proofData.burnedTokenBalance,
+        amount: remintAmount,
         blockNumber, //blockNumber: BigInt(proofInputs.blockData.block.number),
-        nullifier: ethers.toBeHex(proofInputs.proofData.nullifier),
+        nullifierId: proofInputs.proofData.nullifierData.nullifierId,
+        nullifier: proofInputs.proofData.nullifierData.nullifier,
         snarkProof: ethers.hexlify(proof.proof),
         
     }
@@ -184,6 +190,7 @@ async function main() {
     console.log("---------------------------------------")
     const remintTx = await remint({ ...remintInputs, contract: contractRecipientWallet })
     console.log({ remintTx: (await remintTx.wait(1)).hash })
+    console.log({ burnAddress, secret: secret})
 
 
 }
