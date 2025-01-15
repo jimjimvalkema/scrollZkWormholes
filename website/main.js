@@ -7,18 +7,18 @@ import { Noir } from '@noir-lang/noir_js';
 
 
 import { abi as contractAbi } from "./abis/Token.json"//'../artifacts/contracts/Token.sol/Token.json'
-import { getSafeRandomNumber , getProofInputs, hashNullifier, hashBurnAddress} from '../scripts/getProofInputs'
+import { getSafeRandomNumber, getProofInputs, hashNullifier, hashBurnAddress, findLatestNonce } from '../scripts/getProofInputs'
 messageUi("initializing prover 🤖")
 // messageUi(`<br>\ndebug SharedArrayBuffer: ${typeof SharedArrayBuffer}`, true)
 complainAboutSharedBufferArray()
 const backend = new BarretenbergBackend(circuit);
-const backendInitPromise = backend.instantiate().then(()=>{messageUi("")})
+const backendInitPromise = backend.instantiate().then(() => { messageUi("") })
 const noir = new Noir(circuit, backend)
 
 
 
 
-const CONTRACT_ADDRESS = "0x12b65F787D7A4672218cA4375f79133564328B28"
+const CONTRACT_ADDRESS = "0xE182977B23296FFdBbcEeAd68dd76c3ea67f447F"
 const FIELD_LIMIT = 21888242871839275222246405745257275088548364400416034343698204186575808495617n //using poseidon so we work with 254 bits instead of 256
 const CHAININFO = {
   chainId: "0x8274f",
@@ -96,13 +96,13 @@ function setContractInfoUi({ userBalance, name, symbol }) {
   [...document.querySelectorAll(".ticker")].map((el) => el.innerText = symbol);
 }
 
-async function refreshUiInfo({ contract,signer }) {
+async function refreshUiInfo({ contract, signer }) {
   const { userBalance, totalSupply, decimals, name, symbol } = await getContractInfo(contract, signer)
   setContractInfoUi({ userBalance, name, symbol })
-  await listRemintableBurnsLocalstorage({ contract, signer})
+  await listRemintableBurnsLocalstorage({ contract, signer })
 }
 
-function messageUi(message, append=false) {
+function messageUi(message, append = false) {
   if (append) {
     document.getElementById("messages").innerHTML += message
   } else {
@@ -127,36 +127,35 @@ async function mintBtnHandler({ contract, decimals, signer }) {
     await tx.wait(1)
 
     //TODO this is janky af
-    await refreshUiInfo({ contract,signer })
+    await refreshUiInfo({ contract, signer })
   })
 }
 
 function addBurnToLocalStorage({ secret, burnAddress, from, txHash }) {
+  burnAddress = ethers.getAddress(burnAddress) // get rid of issue where lower and uppercase addresses create duplicate entries
   secret = ethers.toBeHex(secret)
   const prevBurns = JSON.parse(localStorage.getItem(CONTRACT_ADDRESS))
-  let allBurns = {}
-  if (prevBurns !== null) allBurns = prevBurns
+  const allBurns = prevBurns !== null ? prevBurns : {}
   allBurns[burnAddress] = { secret, txHash, from }
   localStorage.setItem(CONTRACT_ADDRESS, JSON.stringify(allBurns))
+
 }
 
-async function listRemintableBurnsLocalstorage({ contract,signer }) {
+async function listRemintableBurnsLocalstorage({ contract, signer }) {
   return await dumpErrorsInUi(async () => {
     const decimals = await contract.decimals()
     const burnedTokensUi = document.getElementById("burnedTokens")
     burnedTokensUi.innerHTML = ""
     const allBurns = JSON.parse(localStorage.getItem(CONTRACT_ADDRESS))
     if (!allBurns) return;
-    
+
     for (const burnAddress in allBurns) {
       const { secret, txHash, from } = allBurns[burnAddress]
       //console.log( { secret, txHash, from } )
       //TODO do async
       const burnBalance = await contract.balanceOf(burnAddress)
-      if (txHash || burnBalance > 0n) { // no tx? no balance? nothing there!
-        const remintUiLi = await makeRemintUi({secret, burnBalance, burnAddress, txHash, from, contract,decimals,signer })
-        burnedTokensUi.append(remintUiLi)
-      }
+      const remintUiLi = await makeRemintUi({ secret, burnBalance, burnAddress, txHash, from, contract, decimals, signer })
+      burnedTokensUi.append(remintUiLi)
     }
   })
 }
@@ -167,11 +166,65 @@ function br() {
 }
 
 
-async function makeRemintUi({ secret,burnBalance, burnAddress, txHash, from, contract,decimals ,signer}) {
+async function makeRemintUi({ secret, burnBalance, burnAddress, txHash, from, contract, decimals, signer }) {
   const explorer = CHAININFO.blockExplorerUrls[0]
+  const li = document.createElement("li")
+
+  // @optimisation cache the latest nonce and prevSpend amount so we dont need a full resync on every page load and spend
+  const { prevSpendAmount } = await findLatestNonce(secret, contract)
+
+  //button
+  //const nullifier = hashNullifier(secret)
+  // TODO show remaining balance
+  //const isNullified = await contract.nullifiers(nullifier)
+  console.log({ secret, burnAddress })//, nullifier,isNullified})
+
+  const isNullified = false // TODO remove this
+  if (burnBalance - 1n === prevSpendAmount) {
+    li.append(
+      br(),
+      "all is spent (circuit has off by one error, that 1 wei left is burned :/)",
+      br(),
+    )
+    //li.style.textDecoration = "line-through"
+  } else if (burnBalance === 0n) {
+    li.append(
+      br(),
+      "no ballance yet. Is the the tx still pending?",
+      br()
+    )
+    //li.style.textDecoration = "line-through"
+  } else {
+    const remintBtn = document.createElement("button")
+    remintBtn.innerText = "remint"
+    
+
+    //remint address
+    const remintAddresstEl = document.createElement("input")
+    const remintAddressLabel = document.createElement("label")
+    remintAddressLabel.innerText = "recipient address: "
+    remintAddressLabel.append(remintAddresstEl)
+
+    //remintAmount
+    const remintAmountEl = document.createElement("input")
+    const remintAmountLabel = document.createElement("label")
+    remintAmountLabel.innerText = "remint amount: "
+    remintAmountLabel.append(remintAmountEl)
+
+    li.append(
+      br(),
+      remintAddressLabel,
+      br(),
+      remintAmountLabel,
+      remintBtn,
+      br()
+    )
+
+    // workaround for bug in circuit alway leaving 1 wei un-reminted
+    remintBtn.addEventListener("click", () => remintBtnHandler({ signerAddress: signer.address, contract, secret, signer, remintAmountEl, remintAddresstEl,prevSpendAmount, burnBalance }))
+  }
 
   //info
-  const li = document.createElement("li")
   const fromEl = document.createElement("a")
   const burnEl = document.createElement("a")
   fromEl.className = "address"
@@ -181,44 +234,19 @@ async function makeRemintUi({ secret,burnBalance, burnAddress, txHash, from, con
   fromEl.href = `${explorer}/address/${from}`
   burnEl.href = `${explorer}/address/${burnAddress}`
   li.append(
-    `from-address: `,fromEl,
+    ` burn-address: `, burnEl,
     br(),
-    ` burn-address: `,burnEl,
+    // `from-address: `, fromEl,
+    // br(),
+    `amount burned: ${ethers.formatUnits(burnBalance, decimals)},`,
     br(),
-    `amount: ${ethers.formatUnits(burnBalance, decimals)},`,
+    `amount spent: ${ethers.formatUnits(prevSpendAmount, 18)}`
   )
   if (txHash) {
     const txHashEl = document.createElement("a")
     txHashEl.innerText = `${txHash}`
     txHashEl.href = `${explorer}/tx/${txHash}`
-    li.append(br(), `tx: `,txHashEl)
-  }
-
-  //button
-  const nullifier = hashNullifier(secret)
-
-  const isNullified = await contract.nullifiers(nullifier)
-  console.log({secret, burnAddress, nullifier,isNullified})
-  if (isNullified) {
-    li.append(
-      br(),
-      "already reminted"
-    )
-    li.style.textDecoration = "line-through"
-  } else if (burnBalance === 0n) { 
-    li.append(
-      br(),
-      "no ballance yet. Is the the tx still pending?"
-    )
-    li.style.textDecoration = "line-through"
-  } else {
-    const remintBtn = document.createElement("button")
-    remintBtn.innerText = "remint"
-    li.append(
-      br(),
-      remintBtn
-    )
-    remintBtn.addEventListener("click", ()=>remintBtnHandler({ to:signer.address, contract, secret,signer }))
+    li.append(br(), `tx: `, txHashEl)
   }
   return li
 }
@@ -240,7 +268,7 @@ function complainAboutSharedBufferArray() {
       <b>DEBUG</b>: \n<br>
       <code>
       SharedArrayBuffer: ${typeof SharedArrayBuffer} \n<br>
-      window.crossOriginIsolated: ${ window.crossOriginIsolated} \n<br>
+      window.crossOriginIsolated: ${window.crossOriginIsolated} \n<br>
       window.location.origin: ${window.location.origin} \n<br>
       <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer#security_requirements">https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer#security_requirements</a>
       </code>
@@ -279,29 +307,38 @@ async function createSnarkProof({ proofInputsNoirJs, circuit = circuit }) {
   const verified = await backend.verifyProof(proof)
   console.log({ verified })
 
-  return proof 
+  return proof
 }
 
-async function remintBtnHandler({ to, contract, secret , signer}) {
+async function remintBtnHandler({ signerAddress, contract, secret, signer, remintAmountEl,remintAddresstEl,prevSpendAmount, burnBalance }) {
   return await dumpErrorsInUi(async () => {
+    const to = remintAddresstEl.value === "" ? signerAddress : ethers.getAddress(remintAddresstEl.value)
+    const remintAmount = ethers.parseUnits(remintAmountEl.value, 18)
+    const offByOneFixRemintAmount = (burnBalance-prevSpendAmount) === remintAmount ? (remintAmount - 1n) : remintAmount
+    const amount = offByOneFixRemintAmount
+
     const provider = contract.runner.provider
     const MAX_HASH_PATH_SIZE = 26;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
     const MAX_RLP_SIZE = 650
 
     const blockNumber = BigInt(await provider.getBlockNumber("latest"))
-    const proofInputs = await getProofInputs(contract.target, blockNumber, to, secret, provider, MAX_HASH_PATH_SIZE, MAX_RLP_SIZE)
-    console.log({proofInputs})
-    const amount = proofInputs.proofData.burnedTokenBalance
+    console.log("aaaaaaaaaaaaaaaaaaaaaaaaaa")
+    console.log(remintAmount, prevSpendAmount)
+    console.log({contract: contract.target, blockNumber, amount, to, secret, provider, MAX_HASH_PATH_SIZE, MAX_RLP_SIZE})
+    const proofInputs = await getProofInputs(contract.target, blockNumber, amount, to, secret, provider, MAX_HASH_PATH_SIZE, MAX_RLP_SIZE)
+    console.log({ proofInputs })
+
 
     const proof = await createSnarkProof({ proofInputsNoirJs: proofInputs.noirJsInputs, circuit: circuit })
-    console.log({proof})
+    console.log({ proof })
     //console.log({proof})
-    
+    // TODO make this object in a new function in getProofInputs.js
     const remintInputs = {
       to,
       amount,
       blockNumber, //blockNumber: BigInt(proofInputs.blockData.block.number),
-      nullifier: ethers.zeroPadValue(proofInputs.proofData.nullifier, 32),
+      nullifierId: proofInputs.proofData.nullifierData.nullifierId,
+      nullifier: proofInputs.proofData.nullifierData.nullifier,
       snarkProof: ethers.hexlify(proof.proof),
 
     }
@@ -309,17 +346,21 @@ async function remintBtnHandler({ to, contract, secret , signer}) {
     console.log({ remintInputs })
     // console.log("---------------------------------------")
     messageUi("now sign the 2 transactions the `setBlockHash` and `reMint` tx. \n<br> Note: setBlockHash is a workaround since scroll doesnt support the BLOCKHASH opcode yet")
-    const setBlockHashTx = await contract.setBlockHash(proofInputs.blockData.block.hash,remintInputs.blockNumber)
+    const setBlockHashTx = await contract.setBlockHash(proofInputs.blockData.block.hash, remintInputs.blockNumber)
     await putTxInUi(await setBlockHashTx)
-    messageUi("\n waiting for 1 confirmations for `setBlockHash` transaction to confirm\n<br> after that you can finally remint!!!",true)
+    messageUi("\n waiting for 1 confirmations for `setBlockHash` transaction to confirm\n<br> after that you can finally remint!!!", true)
     await setBlockHashTx.wait(1)
     await new Promise(resolve => setTimeout(resolve, 500))
-    const remintTx = await contract.reMint(remintInputs.to, remintInputs.amount, remintInputs.blockNumber, remintInputs.nullifier, remintInputs.snarkProof)
+
+    // TODO make wrapped function inside getProofInputs that consumes the remintInputs
+    const remintTx = await contract.reMint(remintInputs.to, remintInputs.amount, remintInputs.blockNumber, remintInputs.nullifierId, remintInputs.nullifier, remintInputs.snarkProof)
+
+
     await putTxInUi(await remintTx)
     await remintTx.wait(1)
 
     //TODO this is janky af
-    await refreshUiInfo({ contract,signer})
+    await refreshUiInfo({ contract, signer })
   })
 
 }
@@ -327,17 +368,21 @@ async function remintBtnHandler({ to, contract, secret , signer}) {
 async function burnBtnHandler({ contract, decimals, signer }) {
   return await dumpErrorsInUi(async () => {
     const amountUnparsed = document.getElementById("burnAmount").value
+    console.log({ amountUnparsed })
     const amount = ethers.parseUnits(amountUnparsed, decimals)
 
     const secret = getSafeRandomNumber()
-    const burnAddress = hashBurnAddress(secret) // take only last 20 bytes (because eth address are 20 bytes)
+    const burnAddressInput = document.getElementById("burnAddressInput")
+    console.log({ burnAddressInputvalue: burnAddressInput.value })
+    const burnAddress = burnAddressInput.value === "" ? hashBurnAddress(secret) : ethers.getAddress(burnAddressInput.value);
     const from = signer.address
-    addBurnToLocalStorage({ secret, burnAddress, from, txHash: null }) // user can exit page and then submit the txs so we save it before the burn just in case
+    console.log({ secret, burnAddress, from, txHash: null })
+    addBurnToLocalStorage({ secret, burnAddress, from, txHash: null }) // user can exit page and then submit the txs so we save the secret before the burn just in case
     const burnTx = await contract.transfer(burnAddress, amount)
     addBurnToLocalStorage({ secret, burnAddress, from, txHash: burnTx.hash }) // we got a txhash now
     await putTxInUi(burnTx)
     await burnTx.wait(1)
-    await refreshUiInfo({contract,signer})
+    await refreshUiInfo({ contract, signer })
   })
 
 }
@@ -352,13 +397,18 @@ async function main() {
   const { userBalance, totalSupply, decimals, name, symbol } = await getContractInfo(contract, signer)
   setContractInfoUi({ userBalance, name, symbol })
   setEventListeners({ contract, decimals, signer })
-  await listRemintableBurnsLocalstorage({contract, signer})
+  await listRemintableBurnsLocalstorage({ contract, signer })
 
 
 
   //--------------------------
   window.contract = contract
   window.signer = signer
+
+  const walletLatestBlock = ethers.toBigInt((await provider.getBlock("latest")).number)
+  const etherscanLatestBlock = ethers.toBigInt((await (await fetch(`https://api-sepolia.scrollscan.com/api?module=proxy&action=eth_blockNumber&apikey=YGETYAVVAW8V4JY9T92C3BFMFHG53HRPMH`)).json()).result)
+  const nBlockWalletBehindEtherscan = etherscanLatestBlock - walletLatestBlock
+  console.log({walletLatestBlock, etherscanLatestBlock, nBlockWalletBehindEtherscan})
 }
 
 await main()

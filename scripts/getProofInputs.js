@@ -115,11 +115,13 @@ real_hash_path_len = "${hashPaths.storage.hashPath.length}"`
 export async function getStorageProofOfMapping({contractAddress, key, keyType, slot,blockNumber, provider}) {
     const storageKey = createStoragePositionMapping(key, keyType, slot)
     const proof = await getProof(contractAddress, storageKey, blockNumber, provider)
+    console.log({proof})
 
     const hashPaths = {
         "account": getHashPathFromProof(proof.accountProof),
         "storage": getHashPathFromProof(proof.storageProof[0].proof)
     }
+    console.log(hashPaths)
     return hashPaths
     
 }
@@ -150,6 +152,7 @@ export function hashBurnAddress(secret) {
     return ethers.zeroPadValue(ethers.hexlify(burnAddress),20)
 }
 
+// TODO find better name since it get prevSpendAmount and nonce
 export async function findLatestNonce(secret, tokenContract) {
     //console.log(JSON.stringify(tokenContract))
     let nonce = -1n // TODO clean up this while loop so nonce starts at 0n. (for readability)
@@ -179,7 +182,9 @@ export async function getProofData(contractAddress, burnAddress,withdrawAmount, 
 
     
     // storage proofs
+    console.log("getting balance merkle proof")
     const balancesHashPaths = await getStorageProofOfMapping({contractAddress, key:burnAddress, keyType:"address", slot:BALANCES_SLOT,blockNumber, provider})
+    console.log("getting nullifier merkle proof")
     const prevNullifierHashPaths = await getStorageProofOfMapping({contractAddress, key:prevNullifierId, keyType:"bytes32", slot:NULLIFIERS_SLOT,blockNumber, provider})
     console.log({prevNullifierLeaf: prevNullifierHashPaths.storage.leafNode})
     console.log({BalancesLeaf: balancesHashPaths.storage.leafNode})

@@ -220,4 +220,6 @@ modify `../scripts/getScrollProof.js` at getBlockHeaderRlp() for mainnet
 *https://github.com/jimjimvalkema/scrollZkStorageProofs/blob/main/scripts/getScrollProof.js#L259*
 
 
-### 
+### scroll bugs
+this [address (0x3040f)](https://sepolia.scrollscan.com/token/0xe182977b23296ffdbbceead68dd76c3ea67f447f?a=0x3040f6436F0c4533587000EC5C36f5272Cc10Cd5) has 10 tokens but the storage proof from the scroll sepolia rpc returns a proof where it has 840 tokens
+0x3040f6436F0c4533587000EC5C36f5272Cc10Cd5

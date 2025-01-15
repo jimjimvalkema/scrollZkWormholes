@@ -137,8 +137,8 @@ async function main() {
 
     //---------------burn -------------------
     // mint fresh tokens (normal mint)
-    const burnAmount = 420000000000000000000n
-    const remintAmount = 22200000000000000n
+    const burnAmount =      420000000000000000000n
+    const remintAmount =    331177800000000000000n-1n //-1n because there is a off by one error in the circuit which burns 1 wei
     const secret = 13093675745686700816186364422135239860302335203703094897030973687686916798500n//getSafeRandomNumber();
     const burnAddress = hashBurnAddress(secret)
 
