@@ -8,7 +8,7 @@ Using storage proofs to track the balances of the burn addresses instead of comm
 
 ![ui](./screenshots/2burns1remintui.png)  
 
-### deploymed on scroll sepolia
+### deploymend on scroll sepolia
 https://sepolia.scrollscan.com/address/0xE182977B23296FFdBbcEeAd68dd76c3ea67f447F
 
 ## WARNING
@@ -223,3 +223,5 @@ modify `../scripts/getScrollProof.js` at getBlockHeaderRlp() for mainnet
 ### scroll bugs
 this [address (0x3040f)](https://sepolia.scrollscan.com/token/0xe182977b23296ffdbbceead68dd76c3ea67f447f?a=0x3040f6436F0c4533587000EC5C36f5272Cc10Cd5) has 10 tokens but the storage proof from the scroll sepolia rpc returns a proof where it has 840 tokens
 0x3040f6436F0c4533587000EC5C36f5272Cc10Cd5
+
+This is most recent commit with that contract: https://github.com/jimjimvalkema/scrollZkWormholes/commit/e7d632651d07c1b6a328a0fde0d4296799f5d069

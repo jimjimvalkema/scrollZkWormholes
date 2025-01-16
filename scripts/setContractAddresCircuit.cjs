@@ -5,12 +5,13 @@ const fs = require("fs/promises");
 const { ethers } = require('ethers');
 const path = require( 'path');
 const  {poseidon2}  = require("poseidon-lite-with-domain")
-const {paddArray} = require("./getProofInputs.js")
+const getProofInputsImportPromise =  import("./getProofInputs.js") // i hate this ffs
 const HASH_DOMAIN_ELEMS_BASE = 256;
 const HASH_DOMAIN_BYTE32     = 2 * HASH_DOMAIN_ELEMS_BASE;
 const SOLIDITY_VERSION = "0.8.23"
 
 async function setContractCircuit(contract="0x794464c8c91A2bE4aDdAbfdB82b6db7B1Bb1DBC7", filePath, solidityVerifierDestination, newContractName, provider) {
+    const {paddArray} = await getProofInputsImportPromise;
     const {compressedKeccakCodeHash, poseidonCodeHash} = await getCodeHashes(contract,provider)
     const paddedContractArr = paddArray([...ethers.toBeArray(contract), ...Array(32-20).fill(0)], 32, 0, true )
 
