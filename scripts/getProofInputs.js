@@ -3,9 +3,8 @@
 import { poseidon1, poseidon2, poseidon3 } from "poseidon-lite";
 import { ethers } from "ethers";
 import * as fs from 'node:fs/promises';
-import { getHashPathFromProof } from "../submodules/scrollZkStorageProofs/scripts/decodeScrollProof.js"
-import { createStoragePositionMapping, getBlockHeaderRlp } from "../submodules/scrollZkStorageProofs/scripts/getScrollProof.js"
-import { ZkTrieNode, NodeTypes, leafTypes } from "../submodules/scrollZkStorageProofs/scripts/types/ZkTrieNode.js";
+import { getHashPathFromProof, getBlockHeaderProof, hashStorageKeyMapping } from "../submodules/scrollZkStorageProofs/scripts/decodeScrollProof.js"
+import { ZkTrieNode, NodeTypes, leafTypes, BLOCK_HEADER_ORDERING } from "../submodules/scrollZkStorageProofs/scripts/types/ZkTrieNode.js";
 import argParser from 'args-parser'
 
 const BALANCES_SLOT = "0x0000000000000000000000000000000000000000000000000000000000000000"
@@ -113,7 +112,7 @@ real_hash_path_len = "${hashPaths.storage.hashPath.length}"`
 }
 
 export async function getStorageProofOfMapping({contractAddress, key, keyType, slot,blockNumber, provider}) {
-    const storageKey = createStoragePositionMapping(key, keyType, slot)
+    const storageKey = hashStorageKeyMapping(key, keyType, slot)
     const proof = await getProof(contractAddress, storageKey, blockNumber, provider)
     console.log({proof})
 
@@ -268,7 +267,8 @@ export async function getProofInputs(contractAddress, blockNumber,withdrawAmount
     }  = {...proofData}
 
     
-    const headerRlp = await getBlockHeaderRlp(Number(blockNumber), provider)
+    const {rlp:headerRlp, byteNibbleOffsets} = await getBlockHeaderProof(Number(blockNumber), provider)
+    //ethers.assert(byteNibbleOffsets)
     return {
         blockData:{block, headerRlp},
         proofData,
