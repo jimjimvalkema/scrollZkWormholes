@@ -119,12 +119,16 @@ Install noir
 nargo
 ```shell
 curl -L https://raw.githubusercontent.com/noir-lang/noirup/refs/heads/main/install | bash;
-noirup -v 0.31.0;
+source ~/.bashrc;
+noirup -v 0.32.0;
+source ~/.bashrc;
 ```
 barretenberg
 ```shell
 curl -L https://raw.githubusercontent.com/AztecProtocol/aztec-packages/refs/heads/master/barretenberg/bbup/install | bash;
-bbup -nv 0.31.0;
+source ~/.bashrc;
+bbup -nv 0.32.0;
+source ~/.bashrc;
 sudo apt install libc++-dev;
 ```
 

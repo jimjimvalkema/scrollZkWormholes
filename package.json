@@ -17,9 +17,9 @@
     "install-vite": "cd website; yarn install"
   },
   "dependencies": {
-    "@aztec/bb.js": "0.47.1",
-    "@noir-lang/backend_barretenberg": "0.31.0",
-    "@noir-lang/noir_js": "0.31.0",
+    "@aztec/bb.js": "0.46.1",
+    "@noir-lang/backend_barretenberg": "0.32.0",
+    "@noir-lang/noir_js": "0.32.0",
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
     "@nomicfoundation/hardhat-ethers": "^3.0.0",
     "@nomicfoundation/hardhat-ignition": "^0.15.5",

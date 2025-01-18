@@ -6,6 +6,7 @@ import { vars } from "hardhat/config.js"
 //noir
 import { BarretenbergBackend, BarretenbergVerifier as Verifier } from '@noir-lang/backend_barretenberg';
 import { Noir } from '@noir-lang/noir_js';
+import { Barretenberg } from '@aztec/bb.js';
 
 // other
 import { ethers } from 'ethers';
@@ -82,39 +83,30 @@ async function remint({ to, amount, blockNumber,nullifierId, nullifier, snarkPro
     return remintTx
 }
 
-function printTestFileInputs({ proofInputs, secret, recipientWallet, maxHashPathSize = MAX_HASH_PATH_SIZE, maxRlpSize = MAX_RLP_SIZE }) {
+function printTestFileInputs({ proofData, secret,withdrawAmount, recipientWallet, maxHashPathSize = MAX_HASH_PATH_SIZE, maxRlpSize = MAX_RLP_SIZE }) {
     // TODO update the files instead of logging 
+    console.log({proofData})
     console.log("------test main.nr--------------------------------------")
-    console.log(formatTest(
-        proofInputs.blockData.block,
-        proofInputs.blockData.headerRlp,
-        recipientWallet.address,
-        secret,
-        proofInputs.proofData.burnedTokenBalance,
-        proofInputs.proofData.contractBalance,
-        proofInputs.proofData.hashPaths,
-        maxHashPathSize,
-        maxRlpSize
-    ))
+    console.log(formatTest({proofData, remintAddress: recipientWallet, withdrawAmount, secret}))
     console.log("--------------------------------------------------------\n")
 
     // console.log("------Prover.toml---------------------------------------")
-    console.log(formatToTomlProver(
-        proofInputs.blockData.block,
-        proofInputs.blockData.headerRlp,
-        recipientWallet.address,
-        secret,
-        proofInputs.proofData.burnedTokenBalance,
-        proofInputs.proofData.contractBalance,
-        proofInputs.proofData.hashPaths,
-        maxHashPathSize,
-        maxRlpSize
-    ).toString())
-    console.log("--------------------------------------------------------\n")
+    // console.log(formatToTomlProver(
+    //     proofInputs.blockData.block,
+    //     proofInputs.blockData.headerRlp,
+    //     recipientWallet.address,
+    //     secret,
+    //     proofInputs.proofData.burnedTokenBalance,
+    //     proofInputs.proofData.contractBalance,
+    //     proofInputs.proofData.hashPaths,
+    //     maxHashPathSize,
+    //     maxRlpSize
+    // ).toString())
+    // console.log("--------------------------------------------------------\n")
 }
 
 async function main() {
-    const CONTRACT_ADDRESS = "0xE182977B23296FFdBbcEeAd68dd76c3ea67f447F"
+    const CONTRACT_ADDRESS = "0x41e469c1454A09f3f8a775684A83698ae45B4EB9"
     // --------------
 
     // --------------provider---------------
@@ -152,15 +144,16 @@ async function main() {
 
     // get storage proof
     const blockNumber = BigInt(await provider.getBlockNumber("latest"))
+    // check if address and prevNullifier exist inside getProofInputs otherwise you get a merkle proof bad err
     const proofInputs = await getProofInputs(CONTRACT_ADDRESS, blockNumber, remintAmount, recipientWallet.address, secret, provider, MAX_HASH_PATH_SIZE, MAX_RLP_SIZE)
 
 
     console.log("------------proof input json----------------")
-    console.log({ noirJsInputs: proofInputs.noirJsInputs })
+    console.dir({ noirJsInputs: proofInputs.noirJsInputs }, { depth: null }) 
     //console.log(JSON.stringify(proofInputs.noirJsInputs, null, 2) )
 
     console.log("---------------------------------------")
-    //printTestFileInputs({proofInputs, secret,recipientWallet})
+    printTestFileInputs({proofData: proofInputs.proofData, secret,recipientWallet: recipientWallet.address, withdrawAmount: remintAmount})
 
     // get snark proof
     const proof = await creatSnarkProof({ proofInputsNoirJs: proofInputs.noirJsInputs, circuit: circuit })
