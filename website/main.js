@@ -2,7 +2,8 @@ import { ethers } from 'ethers';
 window.ethers = ethers
 
 import circuit from '../circuits/smolProver/target/zkwormholesEIP7503.json';
-import { BarretenbergBackend, BarretenbergVerifier as Verifier } from '@noir-lang/backend_barretenberg';
+// import { BarretenbergBackend, BarretenbergVerifier as Verifier } from '@noir-lang/backend_barretenberg';
+import { UltraHonkBackend, UltraPlonkBackend } from "@aztec/bb.js";
 import { Noir } from '@noir-lang/noir_js';
 
 
@@ -11,7 +12,7 @@ import { getSafeRandomNumber, getProofInputs, hashNullifier, hashBurnAddress, fi
 messageUi("initializing prover 🤖")
 // messageUi(`<br>\ndebug SharedArrayBuffer: ${typeof SharedArrayBuffer}`, true)
 complainAboutSharedBufferArray()
-const backend = new BarretenbergBackend(circuit);
+const backend = new UltraPlonkBackend(circuit.bytecode,{ threads: navigator.hardwareConcurrency });
 const backendInitPromise = backend.instantiate().then(() => { messageUi("") })
 const noir = new Noir(circuit, backend)
 
@@ -180,10 +181,10 @@ async function makeRemintUi({ secret, burnBalance, burnAddress, txHash, from, co
   console.log({ secret, burnAddress })//, nullifier,isNullified})
 
   const isNullified = false // TODO remove this
-  if (burnBalance - 1n === prevSpendAmount) {
+  if (burnBalance === prevSpendAmount) {
     li.append(
       br(),
-      "all is spent (circuit has off by one error, that 1 wei left is burned :/)",
+      "all is spent",
       br(),
     )
     //li.style.textDecoration = "line-through"
@@ -288,9 +289,10 @@ async function createSnarkProof({ proofInputsNoirJs, circuit = circuit }) {
   }
   await backendInitPromise
   if (window.crossOriginIsolated) {
+    const b = await backend.instantiate()
     messageUi(`
       wow window.crossOriginIsolated is set to true
-      i can use ${backend.options.threads} cores now 😎
+      i can use ${JSON.stringify(backend.backendOptions)} cores now 😎
       `)
   }
 
@@ -313,17 +315,15 @@ async function createSnarkProof({ proofInputsNoirJs, circuit = circuit }) {
 async function remintBtnHandler({ signerAddress, contract, secret, signer, remintAmountEl,remintAddresstEl,prevSpendAmount, burnBalance }) {
   return await dumpErrorsInUi(async () => {
     const to = remintAddresstEl.value === "" ? signerAddress : ethers.getAddress(remintAddresstEl.value)
-    const remintAmount = ethers.parseUnits(remintAmountEl.value, 18)
-    const offByOneFixRemintAmount = (burnBalance-prevSpendAmount) === remintAmount ? (remintAmount - 1n) : remintAmount
-    const amount = offByOneFixRemintAmount
+    const amount = ethers.parseUnits(remintAmountEl.value, 18)
 
     const provider = contract.runner.provider
-    const MAX_HASH_PATH_SIZE = 26;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
+    const MAX_HASH_PATH_SIZE = 23;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
     const MAX_RLP_SIZE = 650
 
     const blockNumber = BigInt(await provider.getBlockNumber("latest"))
     console.log("aaaaaaaaaaaaaaaaaaaaaaaaaa")
-    console.log(remintAmount, prevSpendAmount)
+    console.log(remintAmountEl.value, prevSpendAmount)
     console.log({contract: contract.target, blockNumber, amount, to, secret, provider, MAX_HASH_PATH_SIZE, MAX_RLP_SIZE})
     const proofInputs = await getProofInputs(contract.target, blockNumber, amount, to, secret, provider, MAX_HASH_PATH_SIZE, MAX_RLP_SIZE)
     console.log({ proofInputs })

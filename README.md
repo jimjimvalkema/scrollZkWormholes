@@ -3,13 +3,13 @@ An erc20 token with [EIP7503](https://eips.ethereum.org/EIPS/eip-7503) (zkwormho
 Using storage proofs to track the balances of the burn addresses instead of commitments in a merkle tree. 
 
 **Try it out here: https://scrollzkwormholes.jimjim.dev/**  
-*Or on ipfs: https://bafybeichjrwquiabspceeyvz5mkysszjno5cgj6a4vrfp2sthsfiszehjy.ipfs.dweb.link/*
+*Or on ipfs: https://bafybeia3aeuhou4jwtoakvds7ya5qxe5hwjqchmabvvvuwvd6thnqubgzm.ipfs.dweb.link/*
 
 
 ![ui](./screenshots/2burns1remintui.png)  
 
 ### deploymend on scroll sepolia
-https://sepolia.scrollscan.com/address/0xE182977B23296FFdBbcEeAd68dd76c3ea67f447F
+https://sepolia.scrollscan.com/address/0x21d083295E2551E5815C2F0b4CB73dE2539106B7
 
 ## WARNING
 This version is not mainnet ready since it uses a workaround that allows **ANYONE** to mint free tokens.  
