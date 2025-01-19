@@ -42,6 +42,7 @@ async function getProof(contractAddress, storageKey, blockNumber, provider) {
 }
 
 export function paddArray(arr, len = 32, filler = 0, infront = true) {
+    //ethers.assert(arr.length >= len, "tried to pad a array that is larger then specified len")
     if (infront) {
         return [...Array(len - arr.length).fill(filler), ...arr]
 
@@ -310,6 +311,8 @@ function Bytes(input, len) {
  */
 
 export async function getProofInputs(contractAddress, blockNumber,withdrawAmount,remintAddress, secret, provider, maxHashPathLen=MAX_HASH_PATH_SIZE, maxRlplen=MAX_RLP_SIZE) {
+ 
+    
     const burnAddress = hashBurnAddress(secret)
     const proofData = await getProofData(contractAddress,burnAddress, withdrawAmount,Number(blockNumber),secret, provider)
 
@@ -336,6 +339,17 @@ export async function getProofInputs(contractAddress, blockNumber,withdrawAmount
             prevNullifierStateProof
         },
     }  = {...proofData}
+
+    // check if the proof arent too large
+    const hashPathLenghts = [
+        balancesStateProof.account.hashPath.length,
+        balancesStateProof.storage.hashPath.length,
+        prevNullifierStateProof.account.hashPath.length,
+        prevNullifierStateProof.storage.hashPath.length
+    ]
+    const longestHashPath = Math.max(...hashPathLenghts)
+    ethers.assert(MAX_HASH_PATH_SIZE >= longestHashPath, "proof size is larger than MAX_HASH_PATH_SIZE")
+    // TODO RLP len check
 
     //ethers.assert(byteNibbleOffsets)
     return {

@@ -79,8 +79,8 @@ async function creatSnarkProof({ proofInputsNoirJs, circuit = circuit }) {
     const backend = new UltraPlonkBackend(circuit.bytecode,  { threads:  os.cpus().length });
     const { witness } = await noir.execute(proofInputsNoirJs);
     const proof = await backend.generateProof(witness);
-    const verified = await backend.verifyProof(proof);
-    console.log({ verified })
+    const verifiedByJs = await backend.verifyProof(proof);
+    console.log({ verifiedByJs })
 
     return proof 
 }
@@ -97,14 +97,13 @@ async function setBlockHash({ blockHash, blockNumber, contract }) {
 async function remint({ to, amount, blockNumber,nullifierId, nullifier, snarkProof, contract }) {
     // verify on chain and reMint!
     console.log("reminting with call args:")
-    console.log({to, amount, blockNumber,nullifierId,nullifier, snarkProof})
+    //console.log({to, amount, blockNumber,nullifierId,nullifier, snarkProof})
     const remintTx = await contract.reMint(to, amount, blockNumber,nullifierId,nullifier, snarkProof)
     return remintTx
 }
 
 function printTestFileInputs({ proofData, secret,withdrawAmount, recipientWallet, maxHashPathSize = MAX_HASH_PATH_SIZE, maxRlpSize = MAX_RLP_SIZE }) {
     // TODO update the files instead of logging 
-    console.log({proofData})
     console.log("------test main.nr--------------------------------------")
     console.log(formatTest({proofData, remintAddress: recipientWallet, withdrawAmount, secret}))
     console.log("--------------------------------------------------------\n")
@@ -125,7 +124,7 @@ function printTestFileInputs({ proofData, secret,withdrawAmount, recipientWallet
 }
 
 async function main() {
-    const CONTRACT_ADDRESS = "0x0C02C9488F6191E6E3618b3c90788954EEF6B982"
+    const CONTRACT_ADDRESS = "0x21d083295E2551E5815C2F0b4CB73dE2539106B7"
     // --------------
 
     // --------------provider---------------
@@ -149,17 +148,17 @@ async function main() {
     //---------------burn -------------------
     // mint fresh tokens (normal mint)
     const burnAmount =      420000000000000000000n
-    const remintAmount =    10000000000000000000n-1n //-1n because there is a off by one error in the circuit which burns 1 wei
+    const remintAmount =    10000000000000000000n //-1n because there is a off by one error in the circuit which burns 1 wei
     const secret = 13093675745686700816186364422135239860302335203703094897030973687686916798500n//getSafeRandomNumber();
     const burnAddress = hashBurnAddress(secret)
 
     //mint
-    const mintTx = await mint({ to: deployerWallet.address, amount: burnAmount, contract: contractDeployerWallet })
-    console.log({ mintTx: (await mintTx.wait(1)).hash })
+    // const mintTx = await mint({ to: deployerWallet.address, amount: burnAmount, contract: contractDeployerWallet })
+    // console.log({ mintTx: (await mintTx.wait(1)).hash })
     
     // burn
-    const { burnTx } = await burn({ secret, amount: burnAmount, contract: contractDeployerWallet })
-    console.log({ burnAddress, burnTx: (await burnTx.wait(3)).hash }) // could wait less confirmation but
+    // const { burnTx } = await burn({ secret, amount: burnAmount, contract: contractDeployerWallet })
+    // console.log({ burnAddress, burnTx: (await burnTx.wait(3)).hash }) // could wait less confirmation but
 
     // get storage proof
     const blockNumber = BigInt(await provider.getBlockNumber("latest"))
@@ -179,7 +178,7 @@ async function main() {
     const smolVerifierAddress = await contractDeployerWallet.smolVerifier()
     const smollVerifier = new ethers.Contract(smolVerifierAddress, smollVerifierAbi, provider);
     const verifiedOnVerifierContract = await smollVerifier.verify(proof.proof, proof.publicInputs)
-    console.log(verifiedOnVerifierContract)
+    console.log({verifiedOnVerifierContract})
     console.log({proof})
 
     //set blockHash(workaroud)

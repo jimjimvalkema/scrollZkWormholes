@@ -14,7 +14,7 @@ global MAX_HASH_PATH_SIZE: u32 = 23; //248;//32; //this is the max tree depth in
 global MAX_RLP_SIZE: u32 = 650; //1000; //should be enough scroll mainnet wasn't going above 621, my guess is 673 bytes max + rlp over head. idk what overhead is tho.
 // TODO actually find out what the largest value could be 
 
-global PADDED_CONTRACT_ADDRESS: [u8;32] = [12,2,201,72,143,97,145,230,227,97,139,60,144,120,137,84,238,246,185,130,0,0,0,0,0,0,0,0,0,0,0,0];// 0x0c02c9488f6191e6e3618b3c90788954eef6b982000000000000000000000000
+global PADDED_CONTRACT_ADDRESS: [u8;32] = [33,208,131,41,94,37,81,229,129,92,47,11,76,183,61,226,83,145,6,183,0,0,0,0,0,0,0,0,0,0,0,0];// 0x21d083295e2551e5815c2f0b4cb73de2539106b7000000000000000000000000
 global BALANCES_SLOT:[u8;32]  = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
 global PARTIAL_NULLIFIERS_SLOT:[u8;32]  = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6];
 global COMPRESSED_KECCAK_CODE_HASH: Field = 0x0e8e0b42b49cc167cf5bd04ee737d0b1e1312e5cc11f8817612271f464fc2924;
@@ -48,6 +48,10 @@ fn hash_nullifier(amount: Field, nonce: Field, secret: Field) -> Field {
 // secret is so others cant try and find the pre-image (since this hash is posted onchain)
 fn hash_nullifier_id(nonce: Field, secret: Field) -> Field {
     poseidon::bn254::hash_2([nonce, secret])
+}
+
+fn lower_then_or_equal(a: Field, b: Field) -> bool {
+    !std::field::bn254::gt(a, b)
 }
 
 //TODO check if its okay id prevNullifier id maps to a nullfier which is 0x000000000
@@ -132,7 +136,7 @@ fn main(
     //new_spend_amount < burned_balance
     // TODO this burns 1 wei because i cant do <=
     // should i just do new_spend_amount == new_spend_amount || secret < new_spend_amount
-    std::field::bn254::assert_lt(new_spend_amount, bytes32_to_field(burned_balance));
+    assert(lower_then_or_equal(new_spend_amount, bytes32_to_field(burned_balance)), "withdraw_amount too large, new_spend_amount is larger than burned_balance");
     let computed_nullifier: Field = hash_nullifier(new_spend_amount, nonce, secret);
     assert(
         computed_nullifier == nullifier, "public input: nullifier, doesnt match the one computed in the circuit"
