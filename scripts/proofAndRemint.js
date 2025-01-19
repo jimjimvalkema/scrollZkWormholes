@@ -4,13 +4,23 @@ import "@nomicfoundation/hardhat-toolbox"
 import { vars } from "hardhat/config.js"
 
 //noir
-import { BarretenbergBackend, BarretenbergVerifier as Verifier } from '@noir-lang/backend_barretenberg';
-import { Noir } from '@noir-lang/noir_js';
-import { Barretenberg } from '@aztec/bb.js';
+// import { BarretenbergBackend, BarretenbergVerifier as Verifier } from '@noir-lang/backend_barretenberg';
+// import { Noir } from '@noir-lang/noir_js';
+// import { Barretenberg } from '@aztec/bb.js';
+
+import { compile, createFileManager } from "@noir-lang/noir_wasm";
+import { UltraHonkBackend, UltraPlonkBackend } from "@aztec/bb.js";
+import { Noir } from "@noir-lang/noir_js";
+// import initNoirC from "@noir-lang/noirc_abi";
+// import initACVM from "@noir-lang/acvm_js";
+// import acvm from "@noir-lang/acvm_js/web/acvm_js_bg.wasm?url";
+// import noirc from "@noir-lang/noirc_abi/web/noirc_abi_wasm_bg.wasm?url";
+// await Promise.all([initACVM(fetch(acvm)), initNoirC(fetch(noirc))]);
 
 // other
 import { ethers } from 'ethers';
 import { poseidon1, poseidon2 } from "poseidon-lite";
+import os from 'os';
 
 // project imports
 import { formatTest, getProofInputs, formatToTomlProver,getSafeRandomNumber,hashBurnAddress } from "./getProofInputs.js"
@@ -24,13 +34,14 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const tokenAbi = JSON.parse(await fs.readFile(__dirname + "/../ignition/deployments/chain-534351/artifacts/TokenModule#Token.json", "utf-8")).abi
+const smollVerifierAbi = JSON.parse(await fs.readFile(__dirname + "/../ignition/deployments/chain-534351/artifacts/VerifiersModule#SmolVerifier.json", "utf-8")).abi
 //--------------------------
 
 //const smolVerifierAbi = JSON.parse(await fs.readFile(__dirname+"/../ignition/deployments/chain-534351/artifacts/VerifiersModule#SmolVerifier.json", "utf-8")).abi
 
 // --------------contract config---------------
 // TODO make these public vars of the contract and retrieve them that way
-const MAX_HASH_PATH_SIZE = 26;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
+const MAX_HASH_PATH_SIZE = 23;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
 const MAX_RLP_SIZE = 650
 const FIELD_LIMIT = 21888242871839275222246405745257275088548364400416034343698204186575808495617n //using poseidon so we work with 254 bits instead of 256
 
@@ -46,21 +57,29 @@ async function burn({ secret, amount, contract }) {
 }
 
 async function creatSnarkProof({ proofInputsNoirJs, circuit = circuit }) {
-    const backend = new BarretenbergBackend(circuit);
-    const noir = new Noir(circuit, backend)
+    // const backend = new BarretenbergBackend(circuit);
+    // const noir = new Noir(circuit, backend)
 
-    // pre noirjs 0.31.0 \/
-    //const proof = await noir.generateProof(proofInputsNoirJs);
+    // // pre noirjs 0.31.0 \/
+    // //const proof = await noir.generateProof(proofInputsNoirJs);
+    // const { witness } = await noir.execute(proofInputsNoirJs);
+    // const noirexcute =  await noir.execute(proofInputsNoirJs);
+    // console.log({noirexcute})
+    // const proof = await backend.generateProof(witness);
+
+    // //TODO remove this debug
+
+    // // pre noirjs 0.31.0 \/
+    // //const verified = await noir.verifyProof(proof)
+    // const verified = await backend.verifyProof(proof)
+    // console.log({ verified })
+    const noir = new Noir(circuit);
+    //console.log({circuit})
+    console.log({ threads:  os.cpus().length })
+    const backend = new UltraPlonkBackend(circuit.bytecode,  { threads:  os.cpus().length });
     const { witness } = await noir.execute(proofInputsNoirJs);
-    const noirexcute =  await noir.execute(proofInputsNoirJs);
-    console.log({noirexcute})
     const proof = await backend.generateProof(witness);
-
-    //TODO remove this debug
-
-    // pre noirjs 0.31.0 \/
-    //const verified = await noir.verifyProof(proof)
-    const verified = await backend.verifyProof(proof)
+    const verified = await backend.verifyProof(proof);
     console.log({ verified })
 
     return proof 
@@ -106,7 +125,7 @@ function printTestFileInputs({ proofData, secret,withdrawAmount, recipientWallet
 }
 
 async function main() {
-    const CONTRACT_ADDRESS = "0x41e469c1454A09f3f8a775684A83698ae45B4EB9"
+    const CONTRACT_ADDRESS = "0x0C02C9488F6191E6E3618b3c90788954EEF6B982"
     // --------------
 
     // --------------provider---------------
@@ -130,17 +149,17 @@ async function main() {
     //---------------burn -------------------
     // mint fresh tokens (normal mint)
     const burnAmount =      420000000000000000000n
-    const remintAmount =    331177800000000000000n-1n //-1n because there is a off by one error in the circuit which burns 1 wei
+    const remintAmount =    10000000000000000000n-1n //-1n because there is a off by one error in the circuit which burns 1 wei
     const secret = 13093675745686700816186364422135239860302335203703094897030973687686916798500n//getSafeRandomNumber();
     const burnAddress = hashBurnAddress(secret)
 
     //mint
-    // const mintTx = await mint({ to: deployerWallet.address, amount: burnAmount, contract: contractDeployerWallet })
-    // console.log({ mintTx: (await mintTx.wait(1)).hash })
+    const mintTx = await mint({ to: deployerWallet.address, amount: burnAmount, contract: contractDeployerWallet })
+    console.log({ mintTx: (await mintTx.wait(1)).hash })
     
     // burn
-    // const { burnTx } = await burn({ secret, amount: burnAmount, contract: contractDeployerWallet })
-    // console.log({ burnAddress, burnTx: (await burnTx.wait(3)).hash }) // could wait less confirmation but
+    const { burnTx } = await burn({ secret, amount: burnAmount, contract: contractDeployerWallet })
+    console.log({ burnAddress, burnTx: (await burnTx.wait(3)).hash }) // could wait less confirmation but
 
     // get storage proof
     const blockNumber = BigInt(await provider.getBlockNumber("latest"))
@@ -157,6 +176,10 @@ async function main() {
 
     // get snark proof
     const proof = await creatSnarkProof({ proofInputsNoirJs: proofInputs.noirJsInputs, circuit: circuit })
+    const smolVerifierAddress = await contractDeployerWallet.smolVerifier()
+    const smollVerifier = new ethers.Contract(smolVerifierAddress, smollVerifierAbi, provider);
+    const verifiedOnVerifierContract = await smollVerifier.verify(proof.proof, proof.publicInputs)
+    console.log(verifiedOnVerifierContract)
     console.log({proof})
 
     //set blockHash(workaroud)

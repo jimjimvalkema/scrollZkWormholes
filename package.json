@@ -1,4 +1,7 @@
 {
+  "esbuildOptions": {
+    "target": "esnext"
+  },
   "type": "module",
   "name": "hardhat-project",
   "devDependencies": {
@@ -17,9 +20,9 @@
     "install-vite": "cd website; yarn install"
   },
   "dependencies": {
-    "@aztec/bb.js": "0.46.1",
-    "@noir-lang/backend_barretenberg": "0.32.0",
-    "@noir-lang/noir_js": "0.32.0",
+    "@aztec/bb.js": "0.66.0",
+    "@noir-lang/noir_js": "1.0.0-beta.1",
+    "@noir-lang/noir_wasm": "1.0.0-beta.1",
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
     "@nomicfoundation/hardhat-ethers": "^3.0.0",
     "@nomicfoundation/hardhat-ignition": "^0.15.5",
@@ -27,7 +30,7 @@
     "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
     "@nomicfoundation/hardhat-verify": "^2.0.0",
     "@nomicfoundation/ignition-core": "^0.15.5",
-    "@openzeppelin/contracts": "^5.0.2",
+    "@openzeppelin/contracts": "^5.2.0",
     "@typechain/ethers-v6": "^0.5.0",
     "@typechain/hardhat": "^9.0.0",
     "@types/chai": "^4.2.0",

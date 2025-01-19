@@ -7,7 +7,7 @@ const PRIVATE_KEY = vars.get("PRIVATE_KEY");
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
-  solidity: "0.8.23",
+  solidity: "0.8.4",
   // https://docs.scroll.io/en/developers/developer-quickstart/#hardhat
   networks: {
     scrollSepolia: {
@@ -18,7 +18,7 @@ module.exports = {
   },
   etherscan: {
     apiKey: {
-      scrollSepolia:SEPOLIA_SCROLL_ETHERSCAN_KEY,
+      scrollSepolia: SEPOLIA_SCROLL_ETHERSCAN_KEY,
     },
     customChains: [
       {
@@ -40,14 +40,29 @@ module.exports = {
   },
 
   solidity: {
-    version: "0.8.23",
-
-    settings: {
-      evmVersion: "shanghai",
-      optimizer: {
-        enabled: true,
-        runs: 200
+    compilers: [
+      // {
+      //   version: "0.8.4",
+      //   settings: {
+      //     evmVersion: "shanghai",
+      //     optimizer: {
+      //       enabled: true,
+      //       runs: 200
+      //     }
+      //   }
+      // },
+      {
+        version: "0.8.28",
+        settings: {
+          evmVersion: "shanghai",
+          optimizer: {
+            enabled: true,
+            runs: 200
+          }
+        }
       }
-    }
+
+    ]
+
   },
 };

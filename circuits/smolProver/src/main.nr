@@ -1,4 +1,4 @@
-use dep::ScrollStorageProver::{storage_proof_on_mapping, poseidon2_domain, get_state_root, split_byte32_to_fields};
+use dep::ScrollStorageProver::{storage_proof_on_mapping, get_state_root};
 use dep::ScrollStorageProver::{Hash_path_proof, Hash_paths_state_proof, Account_preimage_excl_storage};
 use dep::std::field::bytes32_to_field;
 use dep::std::hash::poseidon;
@@ -10,23 +10,15 @@ use dep::std::hash::keccak256;
 
 // MAX_HASH_PATH_SIZE can be up to 32 to be proven in the browser. 248 to cover the full tree
 // the account tree depth of sepolia is 23
-global MAX_HASH_PATH_SIZE: u32 = 26; //248;//32; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
+global MAX_HASH_PATH_SIZE: u32 = 23; //248;//32; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
 global MAX_RLP_SIZE: u32 = 650; //1000; //should be enough scroll mainnet wasn't going above 621, my guess is 673 bytes max + rlp over head. idk what overhead is tho.
 // TODO actually find out what the largest value could be 
 
-global PADDED_CONTRACT_ADDRESS = [65,228,105,193,69,74,9,243,248,167,117,104,74,131,105,138,228,91,78,185,0,0,0,0,0,0,0,0,0,0,0,0];// 0x41e469c1454a09f3f8a775684a83698ae45b4eb9000000000000000000000000
-global BALANCES_SLOT = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
-global PARTIAL_NULLIFIERS_SLOT = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6];
-global COMPRESSED_KECCAK_CODE_HASH = 0x20005f9e60e77f484982af58de155585fb1ac65530a7d5a8418d6a5ad0bfab92;
-global POSEIDON_CODE_HASH = 0x239851df34491459b1117506c3aa820ff5bc9829b7bb07dbee4498dc8ea9086e;
-
-struct Storage_proof_data<let A:u32> {
-    hash_paths: Hash_paths_state_proof<MAX_HASH_PATH_SIZE,MAX_HASH_PATH_SIZE>,
-    balance: Field,
-    nonce_codesize_0: Field,
-    header_rlp: [u8;A],
-    header_rlp_len: u32,
-}
+global PADDED_CONTRACT_ADDRESS: [u8;32] = [12,2,201,72,143,97,145,230,227,97,139,60,144,120,137,84,238,246,185,130,0,0,0,0,0,0,0,0,0,0,0,0];// 0x0c02c9488f6191e6e3618b3c90788954eef6b982000000000000000000000000
+global BALANCES_SLOT:[u8;32]  = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+global PARTIAL_NULLIFIERS_SLOT:[u8;32]  = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6];
+global COMPRESSED_KECCAK_CODE_HASH: Field = 0x0e8e0b42b49cc167cf5bd04ee737d0b1e1312e5cc11f8817612271f464fc2924;
+global POSEIDON_CODE_HASH: Field = 0x0e630c824b73bb5c6321b6342d9f22ae2deeb567cd23d85a80ff0dbeff4ec533;
 
 struct Contract_proof_data<let R:u32> {
     balance: Field,
@@ -36,7 +28,7 @@ struct Contract_proof_data<let R:u32> {
 }
 
 fn get_burn_address(secret: Field) -> [u8; 32] {
-    let hash:[u8] = poseidon::bn254::hash_1([secret]).to_be_bytes(32); //.as_array();
+    let hash:[u8; 32] = poseidon::bn254::hash_1([secret]).to_be_bytes(); //.as_array();
     let mut burn_address:[u8;32] = [0; 32];
 
     // replace last 12 bytes with zero since address is only 20 bytes (noir doesnt support a nicer method hence whacky for loop)
@@ -115,10 +107,10 @@ fn main(
     if (nonce != 0) {
         // verify that the nullifier exist onchain with a storage proof
         // cant do this outside the circuit since that links prev_nullifier_id with the nullifier_id
-        let prev_nullifier: [u8;32] = hash_nullifier(prev_spend_amount, nonce - 1, secret).to_be_bytes(32).as_array();
+        let prev_nullifier: [u8;32] = hash_nullifier(prev_spend_amount, nonce - 1, secret).to_be_bytes();
 
         let state_root_prev_nullifier_id = storage_proof_on_mapping(
-            prev_nullifier_id.to_be_bytes(32).as_array(),
+            prev_nullifier_id.to_be_bytes(),
             PARTIAL_NULLIFIERS_SLOT,
             prev_nullifier,
             PADDED_CONTRACT_ADDRESS,
@@ -194,34 +186,34 @@ fn test_main() {
 
     let burn_addr_storage_proof = Hash_paths_state_proof {
         storage_proof: Hash_path_proof {
-            hash_path:  [0x2664a4f45d7b512e6bfc70507255cf7300082fea39883e4a92a7a2057068240e,0x0000000000000000000000000000000000000000000000000000000000000000,0x1d2c9037d0cd45a3677619b90f6f0c0be89f0aedcf3a911cf75f06bf3e149d89,0x0000000000000000000000000000000000000000000000000000000000000000,0x24f7dcd2c6ea0396d6c7c2afe0a0d2b5ab03fbba920b16545dfa241a1b73ae91,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-            node_types: [6,8,8,8,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+            hash_path:  [0x2664a4f45d7b512e6bfc70507255cf7300082fea39883e4a92a7a2057068240e,0x0000000000000000000000000000000000000000000000000000000000000000,0x1d2c9037d0cd45a3677619b90f6f0c0be89f0aedcf3a911cf75f06bf3e149d89,0x0000000000000000000000000000000000000000000000000000000000000000,0x24f7dcd2c6ea0396d6c7c2afe0a0d2b5ab03fbba920b16545dfa241a1b73ae91,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+            node_types: [6,8,8,8,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
             leaf_type:  0x04,
             real_hash_path_len: 5,
-            hash_path_bools:  [false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false],
+            hash_path_bools:  [false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false],
         },
         account_proof: Hash_path_proof {
-            hash_path:  [0x17b5b341c4302f591b34847f07687ef2bacf846125694380e808452236d6fded,0x020d98b6007e3fd2f6c00e7fd9fa431c189319dccda949f76cedded67a4d1d2b,0x0000000000000000000000000000000000000000000000000000000000000000,0x2f6229ff0c3dce0ed77d03dce60e49c31b571d49e29534f5fb915c80f054c533,0x145cf3f613bb859fede45ab3294e8e1fbb74c169c19329a5acc24c6175485f0b,0x249a7969a5ad587ec2893adf50708ff232e5ff772bcfab7f5b48e9c98ada3cb4,0x1febe3f7abd3eb019bf18352d6ba9be1a72105b00f3ff9643784a8b5f20a2a81,0x2bcc3266fde4a4a970f79e5280920daa0c452f3a27031cee20b8b6ad0a77b879,0x21ac9372b735c63f9a9746d08505608b071dc512146152ba815ae0c3fbfc270f,0x134c862f6127f86766b08cdb1158ff9546d88eb6bac9d1a85da3754751f9eb65,0x14a03077d67dfcee90d8d90ead334a4dafc5a1af6d3771faaf44025fc28c07c2,0x06e91e9f010f7544074a60eee55ecbdcfa489b32d3697a6cb4d03c6c5307891b,0x2094f8aa6f98eb097017c9b7069fd4c4b753441ae403d0c04e2373e5ef273b59,0x2d1cbdb480afa6e3302cb05f191cf5f6f72ecd79ea6fcf018acb44f6770ee1d9,0x027fec991c32a71565c4864663e13666036e3a58f097209fde61371b0fbf0856,0x0767c04b099fd56191928e64692f90e6301a9da4283f57242bb909d2fb9fbc2f,0x2d7a6c2917a449497527dc8f9ee07b99223c1d6c4cae7ec993e3d96e0a95d893,0x27678b63575a9f524c51a7fffc2eff2527b1397ec81b9aa38e17e66b3bb06e3d,0x08530c0a3ab96631ff11f5bc5e3343fd04fe871f2cd88f58985ab4dae09ad64e,0x1fbe2267f893b95ce85d9a001f9d2bca301ef81a9ea3ac822798f7fff20e1e48,0x1624aa8e20f03335d2494777c2ca684a8ee1beed7e44995238e38c25897d053b,0,0,0,0,0],
-            node_types: [6,7,7,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,0,0,0,0,0],
+            hash_path:  [0x17b5b341c4302f591b34847f07687ef2bacf846125694380e808452236d6fded,0x020d98b6007e3fd2f6c00e7fd9fa431c189319dccda949f76cedded67a4d1d2b,0x0000000000000000000000000000000000000000000000000000000000000000,0x2f6229ff0c3dce0ed77d03dce60e49c31b571d49e29534f5fb915c80f054c533,0x145cf3f613bb859fede45ab3294e8e1fbb74c169c19329a5acc24c6175485f0b,0x249a7969a5ad587ec2893adf50708ff232e5ff772bcfab7f5b48e9c98ada3cb4,0x1febe3f7abd3eb019bf18352d6ba9be1a72105b00f3ff9643784a8b5f20a2a81,0x2bcc3266fde4a4a970f79e5280920daa0c452f3a27031cee20b8b6ad0a77b879,0x21ac9372b735c63f9a9746d08505608b071dc512146152ba815ae0c3fbfc270f,0x134c862f6127f86766b08cdb1158ff9546d88eb6bac9d1a85da3754751f9eb65,0x14a03077d67dfcee90d8d90ead334a4dafc5a1af6d3771faaf44025fc28c07c2,0x06e91e9f010f7544074a60eee55ecbdcfa489b32d3697a6cb4d03c6c5307891b,0x2094f8aa6f98eb097017c9b7069fd4c4b753441ae403d0c04e2373e5ef273b59,0x2d1cbdb480afa6e3302cb05f191cf5f6f72ecd79ea6fcf018acb44f6770ee1d9,0x027fec991c32a71565c4864663e13666036e3a58f097209fde61371b0fbf0856,0x0767c04b099fd56191928e64692f90e6301a9da4283f57242bb909d2fb9fbc2f,0x2d7a6c2917a449497527dc8f9ee07b99223c1d6c4cae7ec993e3d96e0a95d893,0x27678b63575a9f524c51a7fffc2eff2527b1397ec81b9aa38e17e66b3bb06e3d,0x08530c0a3ab96631ff11f5bc5e3343fd04fe871f2cd88f58985ab4dae09ad64e,0x1fbe2267f893b95ce85d9a001f9d2bca301ef81a9ea3ac822798f7fff20e1e48,0x1624aa8e20f03335d2494777c2ca684a8ee1beed7e44995238e38c25897d053b,0,0],
+            node_types: [6,7,7,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,0,0],
             leaf_type:  0x04,
             real_hash_path_len: 21,
-            hash_path_bools: [false,true,true,true,true,true,true,true,true,false,true,false,true,true,false,false,false,false,true,true,true,false,false,false,false,false],
+            hash_path_bools: [false,true,true,true,true,true,true,true,true,false,true,false,true,true,false,false,false,false,true,true,true,false,false],
         }
     };
     let prev_nullifier_storage_proof = Hash_paths_state_proof {
         storage_proof: Hash_path_proof {
-            hash_path:  [0x1c515feb0658f1efbae50618c71033004646163d9a2a5259104c8f128b58b8df,0x074dd605c748a1733c3c3b34591753d32c064c77acb3de3013438d356606e181,0x17c9fd382c988682472de53868071a3bd563ce0c63004508b2c0b509c4f08096,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-            node_types: [7,7,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+            hash_path:  [0x1c515feb0658f1efbae50618c71033004646163d9a2a5259104c8f128b58b8df,0x074dd605c748a1733c3c3b34591753d32c064c77acb3de3013438d356606e181,0x17c9fd382c988682472de53868071a3bd563ce0c63004508b2c0b509c4f08096,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+            node_types: [7,7,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
             leaf_type:  0x04,
             real_hash_path_len: 3,
-            hash_path_bools:  [false,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false],
+            hash_path_bools:  [false,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false],
         },
         account_proof: Hash_path_proof {
-            hash_path:  [0x17b5b341c4302f591b34847f07687ef2bacf846125694380e808452236d6fded,0x020d98b6007e3fd2f6c00e7fd9fa431c189319dccda949f76cedded67a4d1d2b,0x0000000000000000000000000000000000000000000000000000000000000000,0x2f6229ff0c3dce0ed77d03dce60e49c31b571d49e29534f5fb915c80f054c533,0x145cf3f613bb859fede45ab3294e8e1fbb74c169c19329a5acc24c6175485f0b,0x249a7969a5ad587ec2893adf50708ff232e5ff772bcfab7f5b48e9c98ada3cb4,0x1febe3f7abd3eb019bf18352d6ba9be1a72105b00f3ff9643784a8b5f20a2a81,0x2bcc3266fde4a4a970f79e5280920daa0c452f3a27031cee20b8b6ad0a77b879,0x21ac9372b735c63f9a9746d08505608b071dc512146152ba815ae0c3fbfc270f,0x134c862f6127f86766b08cdb1158ff9546d88eb6bac9d1a85da3754751f9eb65,0x14a03077d67dfcee90d8d90ead334a4dafc5a1af6d3771faaf44025fc28c07c2,0x06e91e9f010f7544074a60eee55ecbdcfa489b32d3697a6cb4d03c6c5307891b,0x2094f8aa6f98eb097017c9b7069fd4c4b753441ae403d0c04e2373e5ef273b59,0x2d1cbdb480afa6e3302cb05f191cf5f6f72ecd79ea6fcf018acb44f6770ee1d9,0x027fec991c32a71565c4864663e13666036e3a58f097209fde61371b0fbf0856,0x0767c04b099fd56191928e64692f90e6301a9da4283f57242bb909d2fb9fbc2f,0x2d7a6c2917a449497527dc8f9ee07b99223c1d6c4cae7ec993e3d96e0a95d893,0x27678b63575a9f524c51a7fffc2eff2527b1397ec81b9aa38e17e66b3bb06e3d,0x08530c0a3ab96631ff11f5bc5e3343fd04fe871f2cd88f58985ab4dae09ad64e,0x1fbe2267f893b95ce85d9a001f9d2bca301ef81a9ea3ac822798f7fff20e1e48,0x1624aa8e20f03335d2494777c2ca684a8ee1beed7e44995238e38c25897d053b,0,0,0,0,0],
-            node_types: [6,7,7,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,0,0,0,0,0],
+            hash_path:  [0x17b5b341c4302f591b34847f07687ef2bacf846125694380e808452236d6fded,0x020d98b6007e3fd2f6c00e7fd9fa431c189319dccda949f76cedded67a4d1d2b,0x0000000000000000000000000000000000000000000000000000000000000000,0x2f6229ff0c3dce0ed77d03dce60e49c31b571d49e29534f5fb915c80f054c533,0x145cf3f613bb859fede45ab3294e8e1fbb74c169c19329a5acc24c6175485f0b,0x249a7969a5ad587ec2893adf50708ff232e5ff772bcfab7f5b48e9c98ada3cb4,0x1febe3f7abd3eb019bf18352d6ba9be1a72105b00f3ff9643784a8b5f20a2a81,0x2bcc3266fde4a4a970f79e5280920daa0c452f3a27031cee20b8b6ad0a77b879,0x21ac9372b735c63f9a9746d08505608b071dc512146152ba815ae0c3fbfc270f,0x134c862f6127f86766b08cdb1158ff9546d88eb6bac9d1a85da3754751f9eb65,0x14a03077d67dfcee90d8d90ead334a4dafc5a1af6d3771faaf44025fc28c07c2,0x06e91e9f010f7544074a60eee55ecbdcfa489b32d3697a6cb4d03c6c5307891b,0x2094f8aa6f98eb097017c9b7069fd4c4b753441ae403d0c04e2373e5ef273b59,0x2d1cbdb480afa6e3302cb05f191cf5f6f72ecd79ea6fcf018acb44f6770ee1d9,0x027fec991c32a71565c4864663e13666036e3a58f097209fde61371b0fbf0856,0x0767c04b099fd56191928e64692f90e6301a9da4283f57242bb909d2fb9fbc2f,0x2d7a6c2917a449497527dc8f9ee07b99223c1d6c4cae7ec993e3d96e0a95d893,0x27678b63575a9f524c51a7fffc2eff2527b1397ec81b9aa38e17e66b3bb06e3d,0x08530c0a3ab96631ff11f5bc5e3343fd04fe871f2cd88f58985ab4dae09ad64e,0x1fbe2267f893b95ce85d9a001f9d2bca301ef81a9ea3ac822798f7fff20e1e48,0x1624aa8e20f03335d2494777c2ca684a8ee1beed7e44995238e38c25897d053b,0,0],
+            node_types: [6,7,7,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,0,0],
             leaf_type:  0x04,
             real_hash_path_len: 21,
-            hash_path_bools:  [false,true,true,true,true,true,true,true,true,false,true,false,true,true,false,false,false,false,true,true,true,false,false,false,false,false],
+            hash_path_bools:  [false,true,true,true,true,true,true,true,true,false,true,false,true,true,false,false,false,false,true,true,true,false,false],
         }
     };
     let contract_data = Contract_proof_data {

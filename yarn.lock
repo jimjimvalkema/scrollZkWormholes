@@ -7,14 +7,16 @@
   resolved "https://registry.yarnpkg.com/@adraffy/ens-normalize/-/ens-normalize-1.10.1.tgz#63430d04bd8c5e74f8d7d049338f1cd9d4f02069"
   integrity sha512-96Z2IP3mYmF1Xg2cDm8f1gWGf/HUVedQ3FMifV4kG/PQ4yEP51xDtRAEfhVNt5f/uzpNkZHwWQuUcu6D6K+Ekw==
 
-"@aztec/bb.js@0.46.1":
-  version "0.46.1"
-  resolved "https://registry.yarnpkg.com/@aztec/bb.js/-/bb.js-0.46.1.tgz#8d6f3bd47683a5f633e8e39a313254287ed9b7f9"
-  integrity sha512-SDagbw+jLLRVEPvE5ZQlU1VVvOG7YXw4HEC0c7zdPtdehN58m35ejhrAnC8zKg9gSTF6UeoyqdeXdWd72w0wFw==
+"@aztec/bb.js@0.66.0":
+  version "0.66.0"
+  resolved "https://registry.yarnpkg.com/@aztec/bb.js/-/bb.js-0.66.0.tgz#011a2f6e7ab9f01c71d8e1cfadde34dcfd21b128"
+  integrity sha512-x6VXq2/9dI12HsCFe1nzTXISHkjJ2VxtT+r+OCT5rmNEreLiaSc5g0ll1hRC3wMXSCexLRmlrYnhkgWJWD3Zzw==
   dependencies:
     comlink "^4.4.1"
     commander "^10.0.1"
     debug "^4.3.4"
+    fflate "^0.8.0"
+    pako "^2.1.0"
     tslib "^2.4.0"
 
 "@cspotcode/source-map-support@^0.8.0":
@@ -574,40 +576,39 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
-"@noir-lang/acvm_js@0.48.0":
-  version "0.48.0"
-  resolved "https://registry.yarnpkg.com/@noir-lang/acvm_js/-/acvm_js-0.48.0.tgz#4d3d3fee25530e119e7aeeda3ac689ed1715c290"
-  integrity sha512-Hh9FoBdyXiw4tas6EGCyu7qirHG3x07RkJk5tPuzlasN+P6YMVT3sraRjCYbpt9gTwmvVVssRNpcORoSSTKrmw==
+"@noir-lang/acvm_js@1.0.0-beta.1":
+  version "1.0.0-beta.1"
+  resolved "https://registry.yarnpkg.com/@noir-lang/acvm_js/-/acvm_js-1.0.0-beta.1.tgz#d10cda3232bdbc307266ab6efdcc51a9b700679b"
+  integrity sha512-4lWC543pScZ+NG8hqB0xOLfdgqCQJaclrdQ8GVIj7jwZ8mS982XV97IKfglqgE7Ovcik2j8QRHZq5FaVR/Bn9w==
 
-"@noir-lang/backend_barretenberg@0.32.0":
-  version "0.32.0"
-  resolved "https://registry.yarnpkg.com/@noir-lang/backend_barretenberg/-/backend_barretenberg-0.32.0.tgz#c4e74f640a8ac197f1f6ff846b3547fe210a735d"
-  integrity sha512-+4OKjOaIUo8Zez4lS8JMwPDwsf6xgChm3To2m5R3NVN8GM7r+o6S/eABDdaHRBYUoZeUawrqk6UMZoxxucDVSQ==
+"@noir-lang/noir_js@1.0.0-beta.1":
+  version "1.0.0-beta.1"
+  resolved "https://registry.yarnpkg.com/@noir-lang/noir_js/-/noir_js-1.0.0-beta.1.tgz#ae115dc07da38e8c8900d4a3c952642f5ec49811"
+  integrity sha512-QiRHYKkuHDPWdEhuU3SCUAuOZm0KR766S+Pd0nKpRfAcX1p5MDEDS9ij8me3CTAIhVb/VHNx25zUE/i4zs1sDg==
   dependencies:
-    "@aztec/bb.js" "0.46.1"
-    "@noir-lang/types" "0.32.0"
-    fflate "^0.8.0"
+    "@noir-lang/acvm_js" "1.0.0-beta.1"
+    "@noir-lang/noirc_abi" "1.0.0-beta.1"
+    "@noir-lang/types" "1.0.0-beta.1"
 
-"@noir-lang/noir_js@0.32.0":
-  version "0.32.0"
-  resolved "https://registry.yarnpkg.com/@noir-lang/noir_js/-/noir_js-0.32.0.tgz#bf9ba69c6215321d180b66361073386825518207"
-  integrity sha512-G1mlUOURhh00iVz7iwKmTNpe6MMrbA7oXagzNuO6B9Ohc9+CnAfF5mp/6lMgjzZWzblEV25G7crLPr9sJLhhGQ==
+"@noir-lang/noir_wasm@1.0.0-beta.1":
+  version "1.0.0-beta.1"
+  resolved "https://registry.yarnpkg.com/@noir-lang/noir_wasm/-/noir_wasm-1.0.0-beta.1.tgz#f02a9f2b963645022fb9a4a34616c3f1ed84fea8"
+  integrity sha512-se4rO5SnIcdwrhnJqJwVXoiNt/W4m0l7hpcm50q2z2ZDX6knB70uCBZMyri2LZ6qty+YhMys4wVFabFNiKga/Q==
   dependencies:
-    "@noir-lang/acvm_js" "0.48.0"
-    "@noir-lang/noirc_abi" "0.32.0"
-    "@noir-lang/types" "0.32.0"
+    "@noir-lang/types" "1.0.0-beta.1"
+    pako "^2.1.0"
 
-"@noir-lang/noirc_abi@0.32.0":
-  version "0.32.0"
-  resolved "https://registry.yarnpkg.com/@noir-lang/noirc_abi/-/noirc_abi-0.32.0.tgz#12fc6f8b1d0c02ed2efe483c81dd5317004e2c68"
-  integrity sha512-UDfokc3ANTbguygS4jxvhk9L0GRhElK12RyA2bI0EszRmVDPfafWmhqF9e85KcIeK+HSZ0sSifDoXWeNaE6PZw==
+"@noir-lang/noirc_abi@1.0.0-beta.1":
+  version "1.0.0-beta.1"
+  resolved "https://registry.yarnpkg.com/@noir-lang/noirc_abi/-/noirc_abi-1.0.0-beta.1.tgz#8ecd9a9408aafba275b889b845cba77386742148"
+  integrity sha512-Me2LrH57YZl47UvHnzPd02pw8H9snJLob6dv6clbFB7ac6Y8jZvH/YhNGOejgj1fudr/J/V6o+YZaf4oLpxtMg==
   dependencies:
-    "@noir-lang/types" "0.32.0"
+    "@noir-lang/types" "1.0.0-beta.1"
 
-"@noir-lang/types@0.32.0":
-  version "0.32.0"
-  resolved "https://registry.yarnpkg.com/@noir-lang/types/-/types-0.32.0.tgz#e3f65e9eae7550274cd209af55c228332e2268f0"
-  integrity sha512-9ueJFoEx7O8h5/CzzB8Q62HeTbUlgQHVT2BrUnO/QY4atGClIe77vH2an4MCvHY1poG5nZO69CWvDR/+Quqqqw==
+"@noir-lang/types@1.0.0-beta.1":
+  version "1.0.0-beta.1"
+  resolved "https://registry.yarnpkg.com/@noir-lang/types/-/types-1.0.0-beta.1.tgz#4fe9062a8209c9e0987cc41c9506cc4423004b8f"
+  integrity sha512-rcisXDdKNLA7mh0Ll9j3MGG5BP3W52K3Owr0+opJhs+4jHoAx1Gb5vGNG9s6nYb2i21VZMgOzKVvBd25ck0b9w==
 
 "@nomicfoundation/edr-darwin-arm64@0.7.0":
   version "0.7.0"
@@ -818,7 +819,7 @@
     "@nomicfoundation/solidity-analyzer-linux-x64-musl" "0.1.2"
     "@nomicfoundation/solidity-analyzer-win32-x64-msvc" "0.1.2"
 
-"@openzeppelin/contracts@^5.0.2":
+"@openzeppelin/contracts@^5.2.0":
   version "5.2.0"
   resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-5.2.0.tgz#bd020694218202b811b0ea3eec07277814c658da"
   integrity sha512-bxjNie5z89W1Ea0NZLZluFh8PrFNn9DH8DQlujEok2yjsOlraUPKID5p1Wk3qdNbf6XkQ1Os2RvfiHrrXLHWKA==
@@ -3904,6 +3905,11 @@ p-try@^2.0.0:
   version "2.2.0"
   resolved "https://registry.yarnpkg.com/p-try/-/p-try-2.2.0.tgz#cb2868540e313d61de58fafbe35ce9004d5540e6"
   integrity sha512-R4nPAVTAU0B9D35/Gk3uJf/7XYbQcyohSKdvAxIRSNghFl4e71hVoGnBNQz9cWaXxO2I10KTC+3jMdvvoKw6dQ==
+
+pako@^2.1.0:
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/pako/-/pako-2.1.0.tgz#266cc37f98c7d883545d11335c00fbd4062c9a86"
+  integrity sha512-w+eufiZ1WuJYgPXbV/PO3NCMEc3xqylkKHzp8bxp1uW4qaSNQUkwmLLEc3kKsfz8lpV1F8Ht3U1Cm+9Srog2ug==
 
 parse-cache-control@^1.0.1:
   version "1.0.1"

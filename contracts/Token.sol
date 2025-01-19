@@ -2,7 +2,7 @@
 // Compatible with OpenZeppelin Contracts ^5.0.0
 // no dencun
 // https://docs.scroll.io/en/developers/developer-quickstart/#configure-your-tooling
-pragma solidity 0.8.23;
+pragma solidity ^0.8.23;
 
 //import "../../circuits/zkwormholesEIP7503/contract/zkwormholesEIP7503/plonk_vk.sol";
 import {ERC20} from "./ERC20.sol";
