@@ -42,7 +42,7 @@ contract Token is ERC20, Ownable {
         // scroll returns a blockhash without the storage root
         bytes32 blockHash = blockhash(blockNum);
         
-        bytes32[] memory publicInputs = _formatPublicStorageRootInputs(storageRoot, blockHash);
+        bytes32[] memory publicInputs = _formatPublicStorageRootInputs(storageRoot, blockHash, address(this));
         if (!IVerifier(storageRootVerifier).verify(snarkProof, publicInputs)) {
             revert VerificationFailed();
         }
@@ -104,12 +104,18 @@ contract Token is ERC20, Ownable {
         return publicInputs;
     }
 
-    function _formatPublicStorageRootInputs(bytes32 storageRoot, bytes32 blockHash) public pure returns(bytes32[] memory) {
-        bytes32[] memory publicInputs = new bytes32[](33);
+    function _formatPublicStorageRootInputs(bytes32 storageRoot, bytes32 blockHash, address contractAddress) public pure returns(bytes32[] memory) {
+        bytes32[] memory publicInputs = new bytes32[](65);
         publicInputs[0] = storageRoot;
+        bytes20 contractAddressBytes = bytes20(contractAddress);
 
         for (uint i=1; i < 33; i++) {
             publicInputs[i] = bytes32(uint256(uint8(blockHash[i-1])));
+        }
+
+        // only copy first 20 bytes, rest can stay zero
+        for (uint i=33; i < 53; i++) {
+            publicInputs[i] = bytes32(uint256(uint8(contractAddressBytes[i-33])));
         }
         return publicInputs;
     }

@@ -12,7 +12,7 @@ global MAX_RLP_SIZE: u32 = 850;
 fn main(
     storage_root: pub Field,
     block_hash: pub [u8;32],
-    padded_contract: [u8; 32],
+    padded_contract: pub [u8; 32], // it is possible to make this a Field but you would need to supply it in reverse because the zeros are padded at the end which causes it to go over the Field limit
     account_preimage: Account_preimage_excl_storage,
     account_proof: Hash_path_proof<MAX_HASH_PATH_SIZE>,
     header_rlp: [u8; MAX_RLP_SIZE],
