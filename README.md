@@ -97,6 +97,7 @@ yarn compile-contracts; #why??
 
 ### deploy
 ```shell
+rm -fr ignition/deployments;
 yarn hardhat run scripts/deploy.cjs --network scrollSepolia;
 yarn hardhat ignition deploy ignition/modules/Token.cjs --network scrollSepolia --verify #couldnt verify within deploy.cjs so this is a hacky work around
 ```
