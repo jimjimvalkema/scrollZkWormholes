@@ -18,6 +18,7 @@ interface IVerifier {
 
 error VerificationFailed();
 event Remint(bytes32 nullifierId, uint256 amount);
+event StorageRootAdded(uint256 blockNumber);
 
 contract Token is ERC20, Ownable {
     // @notice nullifierId = poseidon(nonce, secret)
@@ -30,18 +31,32 @@ contract Token is ERC20, Ownable {
     // Emiting a log with nullifierId is best gas wise but requires event scanning. (prob do this)
     mapping (bytes32 => uint256) public remintedAmounts; // nullifierId -> amountReminted 
 
-    // smolverifier doesnt go down the full 248 depth of the tree but is able to run witn noir js (and is faster)
-    address public smolVerifier;
-    address public fullVerifier;
+    // remintVerifier doesnt go down the full 248 depth (32 instead) of the tree but is able to run witn noir js (and is faster)
+    address public remintVerifier;
+    address public storageRootVerifier;
 
-    // @workaround since BLOCKHASH opcode is useless
-    // https://docs.scroll.io/en/technology/chain/differences/#opcodes
-    mapping (uint256 => bytes32) public trustedBlockhash;
+    mapping (uint256 => bytes32) public storageRoots;
 
-    //function setBlockHash(bytes32 blockHash, uint256 blockNum) public onlyOwner {
-    function setBlockHash(bytes32 blockHash, uint256 blockNum) public {
-        trustedBlockhash[blockNum] = blockHash;
+    // @NOTICE useless since scrolls BLOCKHASH opcode is broken
+    function setStorageRoot(bytes32 storageRoot, uint256 blockNum, bytes calldata snarkProof) public {
+        // scroll returns a blockhash without the storage root
+        bytes32 blockHash = blockhash(blockNum);
+        
+        bytes32[] memory publicInputs = _formatPublicStorageRootInputs(storageRoot, blockHash);
+        if (!IVerifier(storageRootVerifier).verify(snarkProof, publicInputs)) {
+            revert VerificationFailed();
+        }
+        storageRoots[blockNum] = storageRoot;
+
+        emit StorageRootAdded(blockNum);
     }
+
+    // @TODO @WARNING contract insecure because of this workaround because blockhash opcode is not supported
+    // https://docs.scroll.io/en/technology/chain/differences/#opcodes
+    function setTrustedStorageRoot(bytes32 storageRoot, uint256 blockNum) public {// onlyOwner() {
+        storageRoots[blockNum] = storageRoot;
+    }
+
 
     // TODO makes this weth like instead of its own token
     constructor()
@@ -50,31 +65,12 @@ contract Token is ERC20, Ownable {
     {
     }
 
-    function setVerifiers(address _fullVerifier, address _smolVerifier) public onlyOwner {
-        require(smolVerifier == address(0x0000000000000000000000000000000000000000), "verifier is already set silly");
-        require(fullVerifier == address(0x0000000000000000000000000000000000000000), "verifier is already set silly");
-        fullVerifier = _fullVerifier;
-        smolVerifier = _smolVerifier;
+    function setVerifiers(address _storageRootVerifier, address _remintVerifier) public onlyOwner {
+        require(remintVerifier == address(0x0000000000000000000000000000000000000000), "verifier is already set silly");
+        require(storageRootVerifier == address(0x0000000000000000000000000000000000000000), "verifier is already set silly");
+        storageRootVerifier = _storageRootVerifier;
+        remintVerifier = _remintVerifier;
     }
-
-    // //---------------debug--------------------------
-    // // TODO remove debug
-    // function reMintTest(address to, uint256 amount, uint256 blockNum, bytes calldata snarkProof, bytes32[] calldata publicInputs) public {
-    //     if (!IVerifier(smolVerifier).verify(snarkProof, publicInputs)) {
-    //         revert VerificationFailed();
-    //     }
-    //     _mint(to, amount);
-    // }
-
-    // // TODO remove debug
-    // function getBlockHash(uint256 blocknum) public view returns(bytes32){
-    //     return blockhash(blocknum);
-    // }
-
-    // // TODO remove debug
-    // function computeFakeBlockHash(uint256 blocknum) public view returns(bytes32){
-    //     return keccak256(abi.encode(block.chainid, blocknum));
-    // }
 
     // // TODO remove debug // WARNING anyone can mint
     function mint(address to, uint256 amount) public {
@@ -83,13 +79,7 @@ contract Token is ERC20, Ownable {
 
     //---------------public---------------------
     function reMint(address to, uint256 amount, uint256 blockNum, bytes32 nullifierId, bytes32 nullifier, bytes calldata snarkProof) public {
-        _reMint( to,  amount,  blockNum, nullifierId, nullifier, snarkProof,  smolVerifier);
-    }
-
-    // just incase the contracts leaf will sit deeper than 53
-    // or less likely the storage tree becomes deeper than 53
-    function reMintFullVerifier(address to, uint256 amount, uint256 blockNum, bytes32 nullifierId, bytes32 nullifier, bytes calldata snarkProof) public {
-        _reMint( to,  amount,  blockNum, nullifierId, nullifier, snarkProof,  fullVerifier);
+        _reMint( to,  amount,  blockNum, nullifierId, nullifier, snarkProof,  remintVerifier);
     }
 
     // verifier wants the [u8;32] (bytes32 array) as bytes32[32] array.
@@ -100,20 +90,26 @@ contract Token is ERC20, Ownable {
     //TODO make private
     // TODO see much gas this cost and if publicInputs can be calldata
     // does bit shifting instead of indexing save gas?
-    function _formatPublicInputs(address to, uint256 amount, bytes32 blkhash, bytes32 nullifierId, bytes32 nullifier) public pure returns (bytes32[] memory) {
+    function _formatPublicRemintInputs(address to, uint256 amount, bytes32 storageRoot, bytes32 nullifierId, bytes32 nullifier) public pure returns (bytes32[] memory) {
         bytes32 amountBytes = bytes32(uint256(amount));
         bytes32 toBytes = bytes32(uint256(uint160(bytes20(to))));
-        bytes32[] memory publicInputs = new bytes32[](36);
+        bytes32[] memory publicInputs = new bytes32[](5);
 
         publicInputs[0] = toBytes;
         publicInputs[1] = amountBytes;
         publicInputs[2] = nullifier;
         publicInputs[3] = nullifierId;
-        // for (uint i=1; i < 33; i++) {
-        //     publicInputs[i] = bytes32(uint256(uint8(amountBytes[i-1])));
-        // }
-        for (uint i=4; i < 36; i++) {
-            publicInputs[i] = bytes32(uint256(uint8(blkhash[i-4])));
+        publicInputs[4] = storageRoot;
+
+        return publicInputs;
+    }
+
+    function _formatPublicStorageRootInputs(bytes32 storageRoot, bytes32 blockHash) public pure returns(bytes32[] memory) {
+        bytes32[] memory publicInputs = new bytes32[](33);
+        publicInputs[0] = storageRoot;
+
+        for (uint i=1; i < 33; i++) {
+            publicInputs[i] = bytes32(uint256(uint8(blockHash[i-1])));
         }
         return publicInputs;
     }
@@ -126,8 +122,8 @@ contract Token is ERC20, Ownable {
         // @workaround
         //blockhash() is fucking use less :,(
         //bytes32 blkhash = blockhash(blockNum);
-        bytes32 blkhash = trustedBlockhash[blockNum];
-        bytes32[] memory publicInputs = _formatPublicInputs(to, amount, blkhash, nullifierId, nullifier);
+        bytes32 storageRoot = storageRoots[blockNum];
+        bytes32[] memory publicInputs = _formatPublicRemintInputs(to, amount, storageRoot, nullifierId, nullifier);
         if (!IVerifier(_verifier).verify(snarkProof, publicInputs)) {
             revert VerificationFailed();
         }
