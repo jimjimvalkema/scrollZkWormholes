@@ -411,7 +411,7 @@ export async function getProofInputs(contractAddress, blockNumber,withdrawAmount
             contract_data: {
                 balance: (ethers.toBeHex(contractBalance)),
                 nonce_codesize_0: (balancesStateProof.account.leafNode.valuePreimage[0]),
-                header_rlp: [...ethers.toBeArray(ethers.zeroPadBytes(rlp, maxRlplen))].map((x) => ethers.toBeHex(x)),
+                header_rlp: [...ethers.toBeArray(ethers.zeroPadBytes(rlp, maxRlplen))].map((x) => x),
                 header_rlp_len: ethers.toBeArray(rlp).length,
             }
             //--------------------

@@ -1,5 +1,5 @@
 [package]
-name = "zkwormholesEIP7503/"
+name = "remintProver/"
 type = "bin"
 authors = [""]
 compiler_version = "1.0.0"
