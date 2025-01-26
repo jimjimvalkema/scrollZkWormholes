@@ -9,7 +9,7 @@ Using storage proofs to track the balances of the burn addresses instead of comm
 ![ui](./screenshots/2burns1remintui.png)  
 
 ### deploymend on scroll sepolia
-https://sepolia.scrollscan.com/address/0x21d083295E2551E5815C2F0b4CB73dE2539106B7
+https://sepolia.scrollscan.com/address/0x136F696481b7d48e6BcffE01a29c67080783A1ff
 
 ## WARNING
 This version is not mainnet ready since it uses a workaround that allows **ANYONE** to mint free tokens.  
@@ -99,7 +99,9 @@ yarn compile-contracts; #why??
 ```shell
 rm -fr ignition/deployments;
 yarn hardhat run scripts/deploy.cjs --network scrollSepolia;
-yarn hardhat ignition deploy ignition/modules/Token.cjs --network scrollSepolia --verify #couldnt verify within deploy.cjs so this is a hacky work around
+
+#couldnt verify within deploy.cjs so this is a hacky work around
+yarn hardhat ignition deploy ignition/modules/Token.cjs --network scrollSepolia --verify 
 ```
 
 

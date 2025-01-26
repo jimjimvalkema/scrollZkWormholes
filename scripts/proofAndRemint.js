@@ -23,26 +23,33 @@ import { poseidon1, poseidon2 } from "poseidon-lite";
 import os from 'os';
 
 // project imports
-import { formatTest, getProofInputs, formatToTomlProver,getSafeRandomNumber,hashBurnAddress } from "./getProofInputs.js"
-import circuit from '../circuits/smolProver/target/zkwormholesEIP7503.json'  with { type: "json" }; //assert {type: 'json'};
+import { formatTest, getProofInputs, formatToTomlProver,getSafeRandomNumber,hashBurnAddress, paddArray } from "./getProofInputs.js"
+import remintProverCircuit from '../circuits/remintProver/target/remintProver.json'  with { type: "json" }; //assert {type: 'json'};
+import storageRootProverCircuit from '../circuits/storageRootProver/target/storageRootProver.json'  with { type: "json" }; //assert {type: 'json'};
 
 //---- node trips up on the # in the file name. This is a work around----
 //import {tokenAbi } from "../ignition/deployments/chain-534351/artifacts/TokenModule#Token.json" assert {type: 'json'};
 import fs from "fs/promises";
 import path from 'path';
 import { fileURLToPath } from 'url';
+import Ethers from "@typechain/ethers-v6";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const tokenAbi = JSON.parse(await fs.readFile(__dirname + "/../ignition/deployments/chain-534351/artifacts/TokenModule#Token.json", "utf-8")).abi
-const smollVerifierAbi = JSON.parse(await fs.readFile(__dirname + "/../ignition/deployments/chain-534351/artifacts/VerifiersModule#SmolVerifier.json", "utf-8")).abi
+const remintVerifierAbi = JSON.parse(await fs.readFile(__dirname + "/../ignition/deployments/chain-534351/artifacts/VerifiersModule#RemintVerifier.json", "utf-8")).abi
+const storageRootVerifierAbi = JSON.parse(await fs.readFile(__dirname + "/../ignition/deployments/chain-534351/artifacts/VerifiersModule#StorageRootVerifier.json", "utf-8")).abi
+console.log({storageRootVerifierAbi})
 //--------------------------
 
 //const smolVerifierAbi = JSON.parse(await fs.readFile(__dirname+"/../ignition/deployments/chain-534351/artifacts/VerifiersModule#SmolVerifier.json", "utf-8")).abi
 
 // --------------contract config---------------
 // TODO make these public vars of the contract and retrieve them that way
-const MAX_HASH_PATH_SIZE = 23;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
+const MAX_HASH_PATH_SIZE = 32;//248; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
 const MAX_RLP_SIZE = 650
+
+const MAX_HASH_PATH_SIZE_STORAGE_PROVER = 64;//should be 248 but wasm can only do 4gb ram;//this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
+const MAX_RLP_SIZE_STORAGE_PROVER = 850
 const FIELD_LIMIT = 21888242871839275222246405745257275088548364400416034343698204186575808495617n //using poseidon so we work with 254 bits instead of 256
 
 async function mint({ to, amount, contract }) {
@@ -56,7 +63,7 @@ async function burn({ secret, amount, contract }) {
     return { burnTx, burnAddress }
 }
 
-async function creatSnarkProof({ proofInputsNoirJs, circuit = circuit }) {
+async function creatSnarkProof({ proofInputsNoirJs, circuit = remintProverCircuit }) {
     // const backend = new BarretenbergBackend(circuit);
     // const noir = new Noir(circuit, backend)
 
@@ -87,10 +94,10 @@ async function creatSnarkProof({ proofInputsNoirJs, circuit = circuit }) {
 
 
 
-async function setBlockHash({ blockHash, blockNumber, contract }) {
+async function setTrustedStorageRoot({ storageRoot, blockNumber, contract }) {
     // @workaround
     // workaround since BLOCKHASH opcode is nerfed: https://docs.scroll.io/en/developers/ethereum-and-scroll-differences/#evm-opcodes
-    const setBlockHashTx = await contract.setBlockHash(blockHash, blockNumber);
+    const setBlockHashTx = await contract.setTrustedStorageRoot(storageRoot, blockNumber);
     return setBlockHashTx
 }
 
@@ -123,8 +130,76 @@ function printTestFileInputs({ proofData, secret,withdrawAmount, recipientWallet
     // console.log("--------------------------------------------------------\n")
 }
 
+/**
+ * 
+ * @typedef {import('./getProofInputs.js').RemintProofData} RemintProofData
+ * @param {RemintProofData} proofData 
+ * @param {ethers.Contract} tokenContract 
+ */
+async function verifyStorageRootOffchain({proofData, tokenContract,storageRootProverCircuit=storageRootProverCircuit, maxHashPathSize=MAX_HASH_PATH_SIZE_STORAGE_PROVER, maxRlpSize=MAX_RLP_SIZE_STORAGE_PROVER}) {
+    //proofData unpacking
+    const storageRoot = proofData.stateProofData.storageRoot
+    const blockHash = proofData.stateProofData.block.hash
+    const contractAddress = tokenContract.target
+    
+    const nonceCodesize0 = proofData.stateProofData.balancesStateProof.accountProof.leafNode.valuePreimage[0]
+    const accountPreimage = proofData.stateProofData.balancesStateProof.accountProof.accountPreimage
+
+    const accountProof = proofData.stateProofData.balancesStateProof.accountProof
+    
+    const rlp = proofData.stateProofData.rlp
+    console.log({rlp})
+    console.log({maxRlpSize})
+
+    //noirjs formatting
+    const noirjsInput = {
+        storage_root: storageRoot,                                                          //pub Field,
+        block_hash: paddArray([...ethers.toBeArray(blockHash)], 32, 0, true),               //pub [u8;32],
+        padded_contract: paddArray([...ethers.toBeArray(contractAddress)], 32, 0, false),   //pub [u8; 32], 
+        
+        account_preimage: {                                                                 //Account_preimage_excl_storage,
+            nonce_codesize_0: nonceCodesize0,                                               //Field,
+            balance: accountPreimage.balance,                                               //Field,
+            compressed_keccak_code_hash: accountPreimage.compressedKeccakCodehash,          //Field,
+            poseidon_code_hash: accountPreimage.poseidonCodeHash                            //Field
+        },
+
+        account_proof: {                                                                    //Hash_path_proof<MAX_HASH_PATH_SIZE>,
+            hash_path: paddArray(accountProof.hashPath,maxHashPathSize,"0x0",false),        //[Field;N],
+            node_types: paddArray(accountProof.nodeTypes,maxHashPathSize,0,false),      //[Field;N],
+            leaf_type: accountProof.leafNode.type,                                          //Field,
+            real_hash_path_len:  accountProof.hashPath.length,                              //u32,
+            hash_path_bools: paddArray(                                                     //[bool;N]
+                accountProof.leafNode.hashPathBools.slice(0, accountProof.hashPath.length).reverse(), //TODO whack do this at the decode proof in the lob somehow
+                maxHashPathSize,
+                false,
+                false
+            )                                                                              
+        },
+
+        header_rlp: paddArray([...ethers.toBeArray(rlp)], maxRlpSize, "0x0", false),            //[u8; MAX_RLP_SIZE],
+        header_rlp_len: ethers.toBeArray(rlp).length                                                          //u32,
+    }
+    console.dir({noirjsInput},{depth:null})
+    const noir = new Noir(storageRootProverCircuit);
+    //console.log({circuit})
+    console.log({ threads:  os.cpus().length })
+    const backend = new UltraPlonkBackend(storageRootProverCircuit.bytecode,  { threads:  os.cpus().length });
+    const { witness } = await noir.execute(noirjsInput);
+    const proof = await backend.generateProof(witness);
+    const verifiedByJs = await backend.verifyProof(proof);
+    console.log({ verifiedByJs })
+
+    const storageRootVerifier = new ethers.Contract(await tokenContract.storageRootVerifier(),storageRootVerifierAbi, tokenContract.runner.provider)
+    const publicInputs = await tokenContract._formatPublicStorageRootInputs(storageRoot, blockHash, tokenContract.target)
+    // console.log({proof, publicInputs})
+    // console.log({proof: ethers.hexlify(proof.proof), publicInputs: [...publicInputs]})
+    const onchainVerified = await storageRootVerifier.verify(ethers.hexlify(proof.proof),  [...publicInputs])
+    console.log({onchainVerified})
+}
+
 async function main() {
-    const CONTRACT_ADDRESS = "0x21d083295E2551E5815C2F0b4CB73dE2539106B7"
+    const CONTRACT_ADDRESS = "0x136F696481b7d48e6BcffE01a29c67080783A1ff"
     // --------------
 
     // --------------provider---------------
@@ -153,12 +228,12 @@ async function main() {
     const burnAddress = hashBurnAddress(secret)
 
     //mint
-    // const mintTx = await mint({ to: deployerWallet.address, amount: burnAmount, contract: contractDeployerWallet })
-    // console.log({ mintTx: (await mintTx.wait(1)).hash })
+    const mintTx = await mint({ to: deployerWallet.address, amount: burnAmount, contract: contractDeployerWallet })
+    console.log({ mintTx: (await mintTx.wait(1)).hash })
     
     // burn
-    // const { burnTx } = await burn({ secret, amount: burnAmount, contract: contractDeployerWallet })
-    // console.log({ burnAddress, burnTx: (await burnTx.wait(3)).hash }) // could wait less confirmation but
+    const { burnTx } = await burn({ secret, amount: burnAmount, contract: contractDeployerWallet })
+    console.log({ burnAddress, burnTx: (await burnTx.wait(3)).hash }) // could wait less confirmation but
 
     // get storage proof
     const blockNumber = BigInt(await provider.getBlockNumber("latest"))
@@ -174,20 +249,33 @@ async function main() {
     printTestFileInputs({proofData: proofInputs.proofData, secret,recipientWallet: recipientWallet.address, withdrawAmount: remintAmount})
 
     // get snark proof
-    const proof = await creatSnarkProof({ proofInputsNoirJs: proofInputs.noirJsInputs, circuit: circuit })
-    const smolVerifierAddress = await contractDeployerWallet.smolVerifier()
-    const smollVerifier = new ethers.Contract(smolVerifierAddress, smollVerifierAbi, provider);
-    const verifiedOnVerifierContract = await smollVerifier.verify(proof.proof, proof.publicInputs)
+    console.log("creating remint proof")
+    const proof = await creatSnarkProof({ proofInputsNoirJs: proofInputs.noirJsInputs, circuit: remintProverCircuit })
+    const remintVerifierAddress = await contractDeployerWallet.remintVerifier()
+    const remintVerifier = new ethers.Contract(remintVerifierAddress, remintVerifierAbi, provider);
+    const verifiedOnVerifierContract = await remintVerifier.verify(proof.proof, proof.publicInputs)
     console.log({verifiedOnVerifierContract})
     console.log({proof})
 
-    //set blockHash(workaroud)
-    const blockHash = proofInputs.blockData.block.hash
-    const setBlockHashTx = await setBlockHash({ blockHash, blockNumber, contract: contractDeployerWallet })
+
+    // this is to pretent that scroll actually made a proper BLOCKHASH opcode
+    // console.log("creating storageRoot proof")
+    await verifyStorageRootOffchain({
+        proofData:proofInputs.proofData , 
+        tokenContract: contractDeployerWallet,
+        storageRootProverCircuit, 
+        maxHashPathSize: MAX_HASH_PATH_SIZE_STORAGE_PROVER, 
+        maxRlpSize: MAX_RLP_SIZE_STORAGE_PROVER
+    })
+
+    //set trusted storageRoot (workaround for scroll missing BLOCKHASH opcode)
+    const storageRoot = proofInputs.proofData.stateProofData.storageRoot
+    const setStorageRootTx = await setTrustedStorageRoot({storageRoot, blockNumber, contract: contractDeployerWallet})
     console.log({
-        setBlockHashTx: (await setBlockHashTx.wait(2)).hash,
+        setStorageRootTx: (await setStorageRootTx.wait(2)).hash,
         blockHash: proofInputs.blockData.block.hash,
-        blockNumber: proofInputs.blockData.block.number
+        blockNumber,
+        storageRoot
     })
 
     //remint
@@ -198,8 +286,8 @@ async function main() {
         nullifierId: proofInputs.proofData.nullifierData.nullifierId,
         nullifier: proofInputs.proofData.nullifierData.nullifier,
         snarkProof: ethers.hexlify(proof.proof),
-        
     }
+    
     console.log("------------remint tx inputs----------------")
     console.log({ remintInputs })
     console.log("---------------------------------------")

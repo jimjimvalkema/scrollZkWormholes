@@ -3,7 +3,7 @@
 import { poseidon1, poseidon2, poseidon3 } from "poseidon-lite";
 import { ethers } from "ethers";
 import * as fs from 'node:fs/promises';
-import { getHashPathFromProof, getBlockHeaderProof, hashStorageKeyMapping } from "../submodules/scrollZkStorageProofs/scripts/decodeScrollProof.js"
+import { getHashPathFromProof, getBlockHeaderProof, hashStorageKeyMapping, decodeProof } from "../submodules/scrollZkStorageProofs/scripts/decodeScrollProof.js"
 import { ZkTrieNode, NodeTypes, leafTypes, BLOCK_HEADER_ORDERING } from "../submodules/scrollZkStorageProofs/scripts/types/ZkTrieNode.js";
 import argParser from 'args-parser'
 
@@ -11,7 +11,7 @@ const BALANCES_SLOT = "0x0000000000000000000000000000000000000000000000000000000
 const NULLIFIERS_SLOT = "0x0000000000000000000000000000000000000000000000000000000000000006"
 const PROVER_TOML = 'zkwormholesExample/circuits/smolProver/Prover.toml'
 const FIELD_LIMIT = 21888242871839275222246405745257275088548364400416034343698204186575808495617n //using poseidon so we work with 254 bits instead of 256
-const MAX_HASH_PATH_SIZE = 23;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
+const MAX_HASH_PATH_SIZE = 32;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
 const MAX_RLP_SIZE = 650//1000; //should be enough scroll mainnet wasn't going above 621, my guess is 673 bytes max + rlp over head. idk what overhead is tho.
 // TODO actually find out what the largest value could be 
 
@@ -84,7 +84,7 @@ secret = "${secret}"
 withdraw_amount = "${withdrawAmount}"
 
 [burn_addr_storage_proof.account_proof]
-hash_path = [${paddArray(hashPaths.account.hashPath, maxHashPathLen, 0,false).map((x)=>`"${x}"`)}]
+hash_path = [${paddArray(hashPaths.accountProof.hashPath, maxHashPathLen, 0,false).map((x)=>`"${x}"`)}]
 hash_path_bools = 
 leaf_type = ""
 node_types = 
@@ -128,41 +128,42 @@ real_hash_path_len = ""
 // contract_balance = "${contractBalance}"
 // header_rlp =  [${[...ethers.toBeArray(ethers.zeroPadBytes(headerRlp,maxRlplen))].map((x)=>`"${x}"`)}]
 // header_rlp_len = "${ethers.toBeArray(headerRlp).length}"
-// nonce_codesize_0 = "${hashPaths.account.leafNode.valuePreimage[0]}"
+// nonce_codesize_0 = "${hashPaths.accountProof.leafNode.valuePreimage[0]}"
 
 // [storage_proof_data.hash_paths.account_proof]
-// hash_path = [${paddArray(hashPaths.account.hashPath, maxHashPathLen, 0,false).map((x)=>`"${x}"`)}]
-// leaf_type = "${hashPaths.account.leafNode.type}"
-// node_types = [${paddArray(hashPaths.account.nodeTypes, maxHashPathLen, 0,false).map((x)=>`"${x}"`)}]
-// real_hash_path_len = "${hashPaths.account.hashPath.length}"` 
+// hash_path = [${paddArray(hashPaths.accountProof.hashPath, maxHashPathLen, 0,false).map((x)=>`"${x}"`)}]
+// leaf_type = "${hashPaths.accountProof.leafNode.type}"
+// node_types = [${paddArray(hashPaths.accountProof.nodeTypes, maxHashPathLen, 0,false).map((x)=>`"${x}"`)}]
+// real_hash_path_len = "${hashPaths.accountProof.hashPath.length}"` 
 // +
-// `\nhash_path_bools = [${paddArray(hashPaths.account.leafNode.hashPathBools.slice(0,hashPaths.account.hashPath.length).reverse(), maxHashPathLen, 0,false).map((x)=>`"${Number(x)}"`)}]`
+// `\nhash_path_bools = [${paddArray(hashPaths.accountProof.leafNode.hashPathBools.slice(0,hashPaths.accountProof.hashPath.length).reverse(), maxHashPathLen, 0,false).map((x)=>`"${Number(x)}"`)}]`
 // +
 // `\n
 // [storage_proof_data.hash_paths.storage_proof]
-// hash_path = [${paddArray(hashPaths.storage.hashPath, maxHashPathLen, 0,false).map((x)=>`"${x}"`)}]
-// leaf_type = "${hashPaths.storage.leafNode.type}"
-// node_types = [${paddArray(hashPaths.storage.nodeTypes, maxHashPathLen,  0,false).map((x)=>`"${x}"`)}]
-// real_hash_path_len = "${hashPaths.storage.hashPath.length}"`
+// hash_path = [${paddArray(hashPaths.storageProof.hashPath, maxHashPathLen, 0,false).map((x)=>`"${x}"`)}]
+// leaf_type = "${hashPaths.storageProof.leafNode.type}"
+// node_types = [${paddArray(hashPaths.storageProof.nodeTypes, maxHashPathLen,  0,false).map((x)=>`"${x}"`)}]
+// real_hash_path_len = "${hashPaths.storageProof.hashPath.length}"`
 // +
-// `\nhash_path_bools =  [${paddArray(hashPaths.storage.leafNode.hashPathBools.slice(0,hashPaths.storage.hashPath.length).reverse(), maxHashPathLen, false,false).map((x)=>`"${Number(x)}"`)}]`
+// `\nhash_path_bools =  [${paddArray(hashPaths.storageProof.leafNode.hashPathBools.slice(0,hashPaths.storageProof.hashPath.length).reverse(), maxHashPathLen, false,false).map((x)=>`"${Number(x)}"`)}]`
 // }
 /**
- * @typedef {{account:hashPath, storage:hashPath}} stateProof
- * @param {stateProof} stateProof 
- * @returns 
+ * @typedef {import("../submodules/scrollZkStorageProofs/scripts/decodeScrollProof.js").decodedProof} decodedProof
+ * @param {{
+ *      contractAddress: ethers.AddressLike, 
+ *      key: ethers.BytesLike, 
+ *      keyType: String, 
+ *      slot: ethers.BytesLike,
+ *      blockNumber: BigInt, 
+ *      provider: ethers.Provider
+ * }} param0 
+ * @returns {Promise<decodedProof>}
  */
-export async function getStorageProofOfMapping({contractAddress, key, keyType, slot,blockNumber, provider}) {
+export async function getStateProofOfMapping({contractAddress, key, keyType, slot,blockNumber, provider}) {
     const storageKey = hashStorageKeyMapping({key, keyType, slot})
     const proof = await getProof(contractAddress, storageKey, blockNumber, provider)
-    console.log({proof})
-
-    const stateProof = {
-        "account": getHashPathFromProof(proof.accountProof),
-        "storage": getHashPathFromProof(proof.storageProof[0].proof)
-    }
-    console.log(stateProof)
-    return stateProof
+    const decodedProof = await decodeProof({ proof, provider, blockNumber })
+    return decodedProof
     
 }
 
@@ -214,7 +215,8 @@ export async function findLatestNonce(secret, tokenContract) {
  * @property {ethers.BytesLike[]} hashPath from leaf-hash-sibling to root-child
  * @property {number[]} nodeTypes from leaf-hash-sibling to root-child
  * @property {ZkTrieNode} leafNode used for the leafHash and nodeKey/hashPathBools in proving
- * 
+ * @property {ethers.BytesLike} storageRoot used for the leafHash and nodeKey/hashPathBools in proving
+ * @typedef {decodedProof} stateProof
  * @typedef {{
  *      amounts: { 
  *          burnedTokenBalance: BigInt,
@@ -226,17 +228,18 @@ export async function findLatestNonce(secret, tokenContract) {
  *          prevNullifierId: ethers.BytesLike, 
  *          nonce: BigInt,
  *      },
- *      storageProofData : {
+ *      stateProofData : {
  *          rlp: ethers.HexString,
  *          block: ethers.Block,
  *          contractBalance: BigInt, 
  *          balancesStateProof: stateProof,
- *          prevNullifierStateProof: stateProof
+ *          prevNullifierStateProof: stateProof,
+ *          storageRoot: ethers.BytesLike
  *      }
- *   }} ProofData 
- * @returns {Promise<ProofData>} proofData
+ *   }} RemintProofData 
+ * @returns {Promise<RemintProofData>} remintProofData
  */
-export async function getProofData(contractAddress, burnAddress,withdrawAmount, blockNumber = 5093419,secret, provider = provider) {
+export async function getRemintProofData(contractAddress, burnAddress,withdrawAmount, blockNumber = 5093419,secret, provider = provider) {
     // contract data
     const tokenContract = new ethers.Contract(contractAddress, abi, provider)
     const burnedTokenBalance = await tokenContract.balanceOf(burnAddress)
@@ -250,11 +253,9 @@ export async function getProofData(contractAddress, burnAddress,withdrawAmount, 
     
     // storage proofs
     console.log("getting balance merkle proof")
-    const balancesStateProof = await getStorageProofOfMapping({contractAddress, key:burnAddress, keyType:"address", slot:BALANCES_SLOT,blockNumber, provider})
+    const balancesStateProof = await getStateProofOfMapping({contractAddress, key:burnAddress, keyType:"address", slot:BALANCES_SLOT,blockNumber, provider})
     console.log("getting nullifier merkle proof")
-    const prevNullifierStateProof = await getStorageProofOfMapping({contractAddress, key:prevNullifierId, keyType:"bytes32", slot:NULLIFIERS_SLOT,blockNumber, provider})
-    console.log({prevNullifierLeaf: prevNullifierStateProof.storage.leafNode})
-    console.log({BalancesLeaf: balancesStateProof.storage.leafNode})
+    const prevNullifierStateProof = await getStateProofOfMapping({contractAddress, key:prevNullifierId, keyType:"bytes32", slot:NULLIFIERS_SLOT,blockNumber, provider})
     
     const block = await provider.getBlock(blockNumber)
     const {rlp, byteNibbleOffsets} = await getBlockHeaderProof({blockNumber:Number(blockNumber), provider})
@@ -277,7 +278,8 @@ export async function getProofData(contractAddress, burnAddress,withdrawAmount, 
             nonce,
         },
 
-        storageProofData : {
+        stateProofData : {
+            storageRoot: balancesStateProof.accountProof.accountPreimage.storageRoot,
             rlp,
             block,
             contractBalance, 
@@ -314,8 +316,8 @@ export async function getProofInputs(contractAddress, blockNumber,withdrawAmount
  
     
     const burnAddress = hashBurnAddress(secret)
-    const proofData = await getProofData(contractAddress,burnAddress, withdrawAmount,Number(blockNumber),secret, provider)
-
+    const proofData = await getRemintProofData(contractAddress,burnAddress, withdrawAmount,Number(blockNumber),secret, provider)
+    const storageRoot = proofData.stateProofData.balancesStateProof.accountProof.accountPreimage.storageRoot
     const {   
         // nullifiers
         amounts: {
@@ -331,10 +333,9 @@ export async function getProofInputs(contractAddress, blockNumber,withdrawAmount
             nonce,
         },
 
-        storageProofData : {
+        stateProofData : {
             rlp,
             block,
-            contractBalance, 
             balancesStateProof,
             prevNullifierStateProof
         },
@@ -342,10 +343,10 @@ export async function getProofInputs(contractAddress, blockNumber,withdrawAmount
 
     // check if the proof arent too large
     const hashPathLenghts = [
-        balancesStateProof.account.hashPath.length,
-        balancesStateProof.storage.hashPath.length,
-        prevNullifierStateProof.account.hashPath.length,
-        prevNullifierStateProof.storage.hashPath.length
+        balancesStateProof.accountProof.hashPath.length,
+        balancesStateProof.storageProof.hashPath.length,
+        prevNullifierStateProof.accountProof.hashPath.length,
+        prevNullifierStateProof.storageProof.hashPath.length
     ]
     const longestHashPath = Math.max(...hashPathLenghts)
     ethers.assert(MAX_HASH_PATH_SIZE >= longestHashPath, "proof size is larger than MAX_HASH_PATH_SIZE")
@@ -361,7 +362,8 @@ export async function getProofInputs(contractAddress, blockNumber,withdrawAmount
             withdraw_amount: ethers.toBeHex(withdrawAmount), //asPaddedArray(withdrawAmount, 32).map((x) => ethers.toBeHex(x)),
             nullifier: nullifier,
             nullifier_id: nullifierId,
-            block_hash: [...ethers.toBeArray(block.hash)].map((x) => ethers.toBeHex(x)),
+            //block_hash: [...ethers.toBeArray(block.hash)].map((x) => ethers.toBeHex(x)),
+            storage_root: storageRoot,
             //--------------------
 
 
@@ -374,45 +376,19 @@ export async function getProofInputs(contractAddress, blockNumber,withdrawAmount
 
             // storage proofs
             burn_addr_storage_proof: {
-                account_proof: {
-                    hash_path: paddArray(balancesStateProof.account.hashPath, maxHashPathLen, ethers.zeroPadBytes("0x00", 32), false).map((x) => (x)),
-                    leaf_type: ethers.toBeHex(balancesStateProof.account.leafNode.type),
-                    node_types: paddArray(balancesStateProof.account.nodeTypes, maxHashPathLen, 0, false),
-                    real_hash_path_len: ethers.toBeHex(balancesStateProof.account.hashPath.length),
-                    hash_path_bools: paddArray(balancesStateProof.account.leafNode.hashPathBools.slice(0, balancesStateProof.account.hashPath.length).reverse(), maxHashPathLen, false, false),
-                },
-                storage_proof: {
-                    hash_path: paddArray(balancesStateProof.storage.hashPath, maxHashPathLen, ethers.zeroPadBytes("0x00", 32), false).map((x) => (x)),
-                    leaf_type: ethers.toBeHex(balancesStateProof.storage.leafNode.type),
-                    node_types: paddArray(balancesStateProof.storage.nodeTypes, maxHashPathLen, 0, false),
-                    real_hash_path_len: (ethers.toBeHex(balancesStateProof.storage.hashPath.length)),
-                    hash_path_bools: paddArray(balancesStateProof.storage.leafNode.hashPathBools.slice(0, balancesStateProof.storage.hashPath.length).reverse(), maxHashPathLen, false, false),
-                },
+                hash_path: paddArray(balancesStateProof.storageProof.hashPath, maxHashPathLen, ethers.zeroPadBytes("0x00", 32), false).map((x) => (x)),
+                leaf_type: ethers.toBeHex(balancesStateProof.storageProof.leafNode.type),
+                node_types: paddArray(balancesStateProof.storageProof.nodeTypes, maxHashPathLen, 0, false),
+                real_hash_path_len: (ethers.toBeHex(balancesStateProof.storageProof.hashPath.length)),
+                hash_path_bools: paddArray(balancesStateProof.storageProof.leafNode.hashPathBools.slice(0, balancesStateProof.storageProof.hashPath.length).reverse(), maxHashPathLen, false, false),
             },
 
-            prev_nullifier_storage_proof: {
-                account_proof: {
-                    hash_path: paddArray(prevNullifierStateProof.account.hashPath, maxHashPathLen, ethers.zeroPadBytes("0x00", 32), false).map((x) => (x)),
-                    leaf_type: ethers.toBeHex(prevNullifierStateProof.account.leafNode.type),
-                    node_types: paddArray(prevNullifierStateProof.account.nodeTypes, maxHashPathLen, 0, false),
-                    real_hash_path_len: ethers.toBeHex(prevNullifierStateProof.account.hashPath.length),
-                    hash_path_bools: paddArray(prevNullifierStateProof.account.leafNode.hashPathBools.slice(0, prevNullifierStateProof.account.hashPath.length).reverse(), maxHashPathLen, false, false),
-                },
-                storage_proof: {
-                    hash_path: paddArray(prevNullifierStateProof.storage.hashPath, maxHashPathLen, ethers.zeroPadBytes("0x00", 32), false).map((x) => (x)),
-                    leaf_type: ethers.toBeHex(prevNullifierStateProof.storage.leafNode.type),
-                    node_types: paddArray(prevNullifierStateProof.storage.nodeTypes, maxHashPathLen, 0, false),
-                    real_hash_path_len: (ethers.toBeHex(prevNullifierStateProof.storage.hashPath.length)),
-                    hash_path_bools: paddArray(prevNullifierStateProof.storage.leafNode.hashPathBools.slice(0, prevNullifierStateProof.storage.hashPath.length).reverse(), maxHashPathLen, false, false),
-
-                },
-            },
-
-            contract_data: {
-                balance: (ethers.toBeHex(contractBalance)),
-                nonce_codesize_0: (balancesStateProof.account.leafNode.valuePreimage[0]),
-                header_rlp: [...ethers.toBeArray(ethers.zeroPadBytes(rlp, maxRlplen))].map((x) => x),
-                header_rlp_len: ethers.toBeArray(rlp).length,
+            prev_nullifier_storage_proof:  {
+                hash_path: paddArray(prevNullifierStateProof.storageProof.hashPath, maxHashPathLen, ethers.zeroPadBytes("0x00", 32), false).map((x) => (x)),
+                leaf_type: ethers.toBeHex(prevNullifierStateProof.storageProof.leafNode.type),
+                node_types: paddArray(prevNullifierStateProof.storageProof.nodeTypes, maxHashPathLen, 0, false),
+                real_hash_path_len: (ethers.toBeHex(prevNullifierStateProof.storageProof.hashPath.length)),
+                hash_path_bools: paddArray(prevNullifierStateProof.storageProof.leafNode.hashPathBools.slice(0, prevNullifierStateProof.storageProof.hashPath.length).reverse(), maxHashPathLen, false, false),
             }
             //--------------------
 
@@ -422,7 +398,7 @@ export async function getProofInputs(contractAddress, blockNumber,withdrawAmount
 }
 /**
  * @param {Object} obj
- * @param {ProofData} obj.proofData 
+ * @param {RemintProofData} obj.proofData 
  * @param {ethers.AddressLike} obj.remintAddress
  * @param {bigint} obj.withdrawAmount
  * @param {ethers.BytesLike} obj.secret
@@ -439,7 +415,7 @@ fn test_main() {
     let withdraw_amount:  Field = ${ethers.toBeHex(withdrawAmount)};
     let nullifier: Field = ${proofData.nullifierData.nullifier};
     let nullifier_id: Field = ${proofData.nullifierData.nullifierId};
-    let block_hash: [u8; 32] = [${paddArray([...ethers.toBeArray(proofData.storageProofData.block.hash)],32,0,true).map((x)=>ethers.toBeHex(x))}];
+    let block_hash: [u8; 32] = [${paddArray([...ethers.toBeArray(proofData.stateProofData.block.hash)],32,0,true).map((x)=>ethers.toBeHex(x))}];
     
     //-----private inputs -----
     let secret: Field  = ${ethers.toBeHex(secret)};
@@ -450,41 +426,41 @@ fn test_main() {
 
     let burn_addr_storage_proof = Hash_paths_state_proof {
         storage_proof: Hash_path_proof {
-            hash_path:  [${paddArray(proofData.storageProofData.balancesStateProof.storage.hashPath, MAX_HASH_PATH_SIZE,0x0,false)}],
-            node_types: [${paddArray(proofData.storageProofData.balancesStateProof.storage.nodeTypes, MAX_HASH_PATH_SIZE,0x0,false)}],
-            leaf_type:  ${ethers.toBeHex(proofData.storageProofData.balancesStateProof.storage.leafNode.type)},
-            real_hash_path_len: ${proofData.storageProofData.balancesStateProof.storage.hashPath.length},
-            hash_path_bools:  [${paddArray(proofData.storageProofData.balancesStateProof.storage.leafNode.hashPathBools.slice(0, proofData.storageProofData.balancesStateProof.storage.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false, false)}],
+            hash_path:  [${paddArray(proofData.stateProofData.balancesStateProof.storageProof.hashPath, MAX_HASH_PATH_SIZE,0x0,false)}],
+            node_types: [${paddArray(proofData.stateProofData.balancesStateProof.storageProof.nodeTypes, MAX_HASH_PATH_SIZE,0x0,false)}],
+            leaf_type:  ${ethers.toBeHex(proofData.stateProofData.balancesStateProof.storageProof.leafNode.type)},
+            real_hash_path_len: ${proofData.stateProofData.balancesStateProof.storageProof.hashPath.length},
+            hash_path_bools:  [${paddArray(proofData.stateProofData.balancesStateProof.storageProof.leafNode.hashPathBools.slice(0, proofData.stateProofData.balancesStateProof.storageProof.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false, false)}],
         },
         account_proof: Hash_path_proof {
-            hash_path:  [${paddArray(proofData.storageProofData.balancesStateProof.account.hashPath, MAX_HASH_PATH_SIZE,0x0,false)}],
-            node_types: [${paddArray(proofData.storageProofData.balancesStateProof.account.nodeTypes, MAX_HASH_PATH_SIZE,0x0,false)}],
-            leaf_type:  ${ethers.toBeHex(proofData.storageProofData.balancesStateProof.account.leafNode.type)},
-            real_hash_path_len: ${proofData.storageProofData.balancesStateProof.account.hashPath.length},
-            hash_path_bools: [${paddArray(proofData.storageProofData.balancesStateProof.account.leafNode.hashPathBools.slice(0, proofData.storageProofData.balancesStateProof.account.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false, false)}],
+            hash_path:  [${paddArray(proofData.stateProofData.balancesStateProof.accountProof.hashPath, MAX_HASH_PATH_SIZE,0x0,false)}],
+            node_types: [${paddArray(proofData.stateProofData.balancesStateProof.accountProof.nodeTypes, MAX_HASH_PATH_SIZE,0x0,false)}],
+            leaf_type:  ${ethers.toBeHex(proofData.stateProofData.balancesStateProof.accountProof.leafNode.type)},
+            real_hash_path_len: ${proofData.stateProofData.balancesStateProof.accountProof.hashPath.length},
+            hash_path_bools: [${paddArray(proofData.stateProofData.balancesStateProof.accountProof.leafNode.hashPathBools.slice(0, proofData.stateProofData.balancesStateProof.accountProof.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false, false)}],
         }
     };
     let prev_nullifier_storage_proof = Hash_paths_state_proof {
         storage_proof: Hash_path_proof {
-            hash_path:  [${paddArray(proofData.storageProofData.prevNullifierStateProof.storage.hashPath, MAX_HASH_PATH_SIZE,0x0,false)}],
-            node_types: [${paddArray(proofData.storageProofData.prevNullifierStateProof.storage.nodeTypes, MAX_HASH_PATH_SIZE,0x0,false)}],
-            leaf_type:  ${ethers.toBeHex(proofData.storageProofData.prevNullifierStateProof.storage.leafNode.type)},
-            real_hash_path_len: ${proofData.storageProofData.prevNullifierStateProof.storage.hashPath.length},
-            hash_path_bools:  [${paddArray(proofData.storageProofData.prevNullifierStateProof.storage.leafNode.hashPathBools.slice(0, proofData.storageProofData.prevNullifierStateProof.storage.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false, false)}],
+            hash_path:  [${paddArray(proofData.stateProofData.prevNullifierStateProof.storageProof.hashPath, MAX_HASH_PATH_SIZE,0x0,false)}],
+            node_types: [${paddArray(proofData.stateProofData.prevNullifierStateProof.storageProof.nodeTypes, MAX_HASH_PATH_SIZE,0x0,false)}],
+            leaf_type:  ${ethers.toBeHex(proofData.stateProofData.prevNullifierStateProof.storageProof.leafNode.type)},
+            real_hash_path_len: ${proofData.stateProofData.prevNullifierStateProof.storageProof.hashPath.length},
+            hash_path_bools:  [${paddArray(proofData.stateProofData.prevNullifierStateProof.storageProof.leafNode.hashPathBools.slice(0, proofData.stateProofData.prevNullifierStateProof.storageProof.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false, false)}],
         },
         account_proof: Hash_path_proof {
-            hash_path:  [${paddArray(proofData.storageProofData.prevNullifierStateProof.account.hashPath, MAX_HASH_PATH_SIZE,0x0,false)}],
-            node_types: [${paddArray(proofData.storageProofData.prevNullifierStateProof.account.nodeTypes, MAX_HASH_PATH_SIZE,0x0,false)}],
-            leaf_type:  ${ethers.toBeHex(proofData.storageProofData.prevNullifierStateProof.account.leafNode.type)},
-            real_hash_path_len: ${proofData.storageProofData.prevNullifierStateProof.account.hashPath.length},
-            hash_path_bools:  [${paddArray(proofData.storageProofData.prevNullifierStateProof.account.leafNode.hashPathBools.slice(0, proofData.storageProofData.prevNullifierStateProof.account.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false, false)}],
+            hash_path:  [${paddArray(proofData.stateProofData.prevNullifierStateProof.accountProof.hashPath, MAX_HASH_PATH_SIZE,0x0,false)}],
+            node_types: [${paddArray(proofData.stateProofData.prevNullifierStateProof.accountProof.nodeTypes, MAX_HASH_PATH_SIZE,0x0,false)}],
+            leaf_type:  ${ethers.toBeHex(proofData.stateProofData.prevNullifierStateProof.accountProof.leafNode.type)},
+            real_hash_path_len: ${proofData.stateProofData.prevNullifierStateProof.accountProof.hashPath.length},
+            hash_path_bools:  [${paddArray(proofData.stateProofData.prevNullifierStateProof.accountProof.leafNode.hashPathBools.slice(0, proofData.stateProofData.prevNullifierStateProof.accountProof.hashPath.length).reverse(), MAX_HASH_PATH_SIZE, false, false)}],
         }
     };
     let contract_data = Contract_proof_data {
-        balance: ${proofData.storageProofData.contractBalance},
-        nonce_codesize_0: ${ethers.zeroPadValue(ethers.toBeHex(proofData.storageProofData.balancesStateProof.account.leafNode.valuePreimage[0]),32)},
-        header_rlp: [${[...ethers.toBeArray(ethers.zeroPadBytes(proofData.storageProofData.rlp, MAX_RLP_SIZE))].map((x) => ethers.toBeHex(x))}],
-        header_rlp_len: ${[...ethers.toBeArray(proofData.storageProofData.rlp,)].length},
+        balance: ${proofData.stateProofData.contractBalance},
+        nonce_codesize_0: ${ethers.zeroPadValue(ethers.toBeHex(proofData.stateProofData.balancesStateProof.accountProof.leafNode.valuePreimage[0]),32)},
+        header_rlp: [${[...ethers.toBeArray(ethers.zeroPadBytes(proofData.stateProofData.rlp, MAX_RLP_SIZE))].map((x) => ethers.toBeHex(x))}],
+        header_rlp_len: ${[...ethers.toBeArray(proofData.stateProofData.rlp,)].length},
     };
 
     main(
@@ -512,24 +488,24 @@ fn test_main() {
     let storage_proof_data = Storage_proof_data {
         hash_paths :Hash_paths_state_proof{
                 account_proof: Hash_path_proof {
-                hash_path:  [${paddArray(hashPaths.account.hashPath, maxHashPathLen, 0,false)}],
-                leaf_type: ${hashPaths.account.leafNode.type},
-                node_types: [${paddArray(hashPaths.account.nodeTypes, maxHashPathLen, 0,false)}],
-                real_hash_path_len: ${hashPaths.account.hashPath.length},`
+                hash_path:  [${paddArray(hashPaths.accountProof.hashPath, maxHashPathLen, 0,false)}],
+                leaf_type: ${hashPaths.accountProof.leafNode.type},
+                node_types: [${paddArray(hashPaths.accountProof.nodeTypes, maxHashPathLen, 0,false)}],
+                real_hash_path_len: ${hashPaths.accountProof.hashPath.length},`
                 +
                 `
-                hash_path_bools: [${paddArray(hashPaths.account.leafNode.hashPathBools.slice(0,hashPaths.account.hashPath.length).reverse(), maxHashPathLen, false,false).map((x)=>`${x}`)}]`
+                hash_path_bools: [${paddArray(hashPaths.accountProof.leafNode.hashPathBools.slice(0,hashPaths.accountProof.hashPath.length).reverse(), maxHashPathLen, false,false).map((x)=>`${x}`)}]`
                 +
                 `
             },
             storage_proof: Hash_path_proof {
-                hash_path: [${paddArray(hashPaths.storage.hashPath, maxHashPathLen, 0,false)}],
-                leaf_type: ${hashPaths.storage.leafNode.type},
-                node_types: [${paddArray(hashPaths.storage.nodeTypes, maxHashPathLen,  0,false)}],
-                real_hash_path_len: ${hashPaths.storage.hashPath.length},`
+                hash_path: [${paddArray(hashPaths.storageProof.hashPath, maxHashPathLen, 0,false)}],
+                leaf_type: ${hashPaths.storageProof.leafNode.type},
+                node_types: [${paddArray(hashPaths.storageProof.nodeTypes, maxHashPathLen,  0,false)}],
+                real_hash_path_len: ${hashPaths.storageProof.hashPath.length},`
                 +
                 `
-                hash_path_bools: [${paddArray(hashPaths.storage.leafNode.hashPathBools.slice(0,hashPaths.storage.hashPath.length).reverse(), maxHashPathLen, false,false).map((x)=>`${x}`)}]`
+                hash_path_bools: [${paddArray(hashPaths.storageProof.leafNode.hashPathBools.slice(0,hashPaths.storageProof.hashPath.length).reverse(), maxHashPathLen, false,false).map((x)=>`${x}`)}]`
                 +
                 `
             },
@@ -537,7 +513,7 @@ fn test_main() {
             contract_balance: ${contractBalance},
             header_rlp:[${[...ethers.toBeArray(ethers.zeroPadBytes(headerRlp,maxRlplen))]}],
             header_rlp_len:${ethers.toBeArray(headerRlp).length},
-            nonce_codesize_0:${hashPaths.account.leafNode.valuePreimage[0]},
+            nonce_codesize_0:${hashPaths.accountProof.leafNode.valuePreimage[0]},
         };
 
 
