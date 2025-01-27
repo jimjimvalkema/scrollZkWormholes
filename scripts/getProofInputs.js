@@ -33,7 +33,7 @@ export function getSafeRandomNumber() {
 }
 
 
-async function getProof(contractAddress, storageKey, blockNumber, provider) {
+async function getProof({contractAddress, storageKey, blockNumber, provider}) {
     const blockNumberHex = "0x" + blockNumber.toString(16)
 
     const params = [contractAddress, [storageKey], blockNumberHex,]
@@ -161,33 +161,23 @@ real_hash_path_len = ""
  */
 export async function getStateProofOfMapping({contractAddress, key, keyType, slot,blockNumber, provider}) {
     const storageKey = hashStorageKeyMapping({key, keyType, slot})
-    const proof = await getProof(contractAddress, storageKey, blockNumber, provider)
+    const proof = await getProof({contractAddress, storageKey, blockNumber, provider})
     const decodedProof = await decodeProof({ proof, provider, blockNumber })
     return decodedProof
     
 }
 
-export function hashNullifier(amount,nonce,secret) {
-    // const hashedSecret = poseidon1([secret]) 
-    // const nullifier = poseidon2([secret,hashedSecret])
+export function hashNullifier({amount,nonce,secret}) {
     const nullifier = poseidon3([amount,nonce,secret])
-    console.log({nullifier})
-    console.log({nullifierHex: ethers.toBeHex(nullifier)})
-    console.log({nullifierHexPad: ethers.zeroPadValue(ethers.toBeHex(nullifier),32)})
     return ethers.zeroPadValue(ethers.toBeHex(nullifier),32)
 }
 
-export function hashNullifierId(nonce,secret) {
-    // const hashedSecret = poseidon1([secret]) 
-    // const nullifier = poseidon2([secret,hashedSecret])
-    // return ethers.zeroPadValue(ethers.toBeHex(nullifier),32)
+export function hashNullifierId({nonce,secret}) {
     const nullifierId = poseidon2([nonce,secret])
-    // console.log({nullifierId})
-    // console.log({nullifierIdHex: ethers.zeroPadValue(ethers.toBeHex(nullifierId),32)})
     return ethers.zeroPadValue(ethers.toBeHex(nullifierId),32)
 }
 
-export function hashBurnAddress(secret) {
+export function hashBurnAddress({secret}) {
     const hash = ethers.toBeArray(poseidon1([secret])) 
     const burnAddress = hash.slice(0,20)
     return ethers.zeroPadValue(ethers.hexlify(burnAddress),20)
@@ -201,7 +191,7 @@ export async function findLatestNonce(secret, tokenContract) {
     let prevSpendAmount = 0n 
     while (nullifier !== "0x00") {
         nonce++;
-        const nullifierId = hashNullifierId(nonce, secret)
+        const nullifierId = hashNullifierId({nonce, secret})
         const remintedAmount = await tokenContract.remintedAmounts(nullifierId)
         prevSpendAmount += remintedAmount
         nullifier = ethers.toBeHex(await tokenContract.partialNullifiers(nullifierId))
@@ -211,6 +201,15 @@ export async function findLatestNonce(secret, tokenContract) {
 }
 
 /**
+ * @param {{
+ *      contractAddress: ethers.AddressLike, 
+ *      burnAddress: ethers.AddressLike,
+ *      withdrawAmount: BigInt, 
+ *      blockNumber: BigInt | number,
+ *      secret: BigInt, 
+ *      provider: ethers.Provider
+ *  }} params
+ * 
  * @typedef hashPath
  * @property {ethers.BytesLike[]} hashPath from leaf-hash-sibling to root-child
  * @property {number[]} nodeTypes from leaf-hash-sibling to root-child
@@ -239,16 +238,16 @@ export async function findLatestNonce(secret, tokenContract) {
  *   }} RemintProofData 
  * @returns {Promise<RemintProofData>} remintProofData
  */
-export async function getRemintProofData(contractAddress, burnAddress,withdrawAmount, blockNumber = 5093419,secret, provider = provider) {
+export async function getRemintProofData({contractAddress, burnAddress,withdrawAmount, blockNumber,secret, provider = provider}) {
     // contract data
     const tokenContract = new ethers.Contract(contractAddress, abi, provider)
     const burnedTokenBalance = await tokenContract.balanceOf(burnAddress)
     const {nonce, prevSpendAmount} = await findLatestNonce(secret, tokenContract)
 
     // nullifiers
-    const nullifier = hashNullifier(prevSpendAmount + withdrawAmount,nonce,secret)
-    const nullifierId = hashNullifierId(nonce,secret)
-    const prevNullifierId = hashNullifierId(nonce-1n,secret)
+    const nullifier = hashNullifier({amount: prevSpendAmount + withdrawAmount,nonce,secret})
+    const nullifierId = hashNullifierId({nonce,secret})
+    const prevNullifierId = hashNullifierId({nonce: nonce-1n,secret})
 
     
     // storage proofs
@@ -302,21 +301,61 @@ function Bytes(input, len) {
 
 }
 
+
 /**
  * 
- * @param {*} contractAddress 
- * @param {*} blockNumber 
- * @param {*} remintAddress 
- * @param {*} secret 
- * @param {*} provider 
- * @returns 
+ * @param {{
+ *      contractAddress: ethers.AddressLike, 
+ *      blockNumber: BigInt,
+ *      withdrawAmount: BigInt,
+ *      remintAddress: ethers.AddressLike, 
+ *      secret: BigInt, 
+ *      providerL ethers.Provider, 
+ *      maxHashPathLen: number, 
+ *      maxRlplen: number
+ * }} params
+ * 
+ * @typedef {{
+ *      remint_address: ethers.AddressLike,
+ *          withdraw_amount: ethers.BytesLike,
+ *          nullifier: ethers.BytesLike,
+ *          nullifier_id: ethers.BytesLike,
+ *          storage_root: ethers.BytesLike,
+ *          secret: ethers.BytesLike,
+ *          burned_balance: number[],
+ *          nonce: ethers.BytesLike,
+ *          prev_nullifier_id: ethers.BytesLike,
+ *          prev_spend_amount: ethers.BytesLike,
+ *          burn_addr_storage_proof: {
+ *              hash_path: ethers.BytesLike[],
+ *              leaf_type: ethers.BytesLike[],
+ *              node_types: ethers.BytesLike[],
+ *              real_hash_path_len: Number,
+ *              hash_path_bools: Boolean[],
+ *          },
+ *          prev_nullifier_storage_proof:  {
+ *              hash_path: ethers.BytesLike[],
+ *              leaf_type: ethers.BytesLike[],
+ *              node_types: ethers.BytesLike[],
+ *              real_hash_path_len: Number,
+ *              hash_path_bools: Boolean[],
+ *          }
+ *      }} noirJsInputs
+ * @typedef {{
+ *        blockData:{
+ *              block: ethers.Block, 
+ *              rlp: ethers.BytesLike
+ *        },
+ *        proofData: RemintProofData,
+ *        noirJsInputs: noirJsInputs
+ *    }} ProofInputs
+ * @returns {Promise<ProofInputs>} ProofInputs
  */
-
-export async function getProofInputs(contractAddress, blockNumber,withdrawAmount,remintAddress, secret, provider, maxHashPathLen=MAX_HASH_PATH_SIZE, maxRlplen=MAX_RLP_SIZE) {
+export async function getProofInputs({contractAddress, blockNumber,withdrawAmount,remintAddress, secret, provider, maxHashPathLen=MAX_HASH_PATH_SIZE, maxRlplen=MAX_RLP_SIZE}) {
  
     
-    const burnAddress = hashBurnAddress(secret)
-    const proofData = await getRemintProofData(contractAddress,burnAddress, withdrawAmount,Number(blockNumber),secret, provider)
+    const burnAddress = hashBurnAddress({secret})
+    const proofData = await getRemintProofData({contractAddress,burnAddress, withdrawAmount,blockNumber:Number(blockNumber),secret, provider})
     const storageRoot = proofData.stateProofData.balancesStateProof.accountProof.accountPreimage.storageRoot
     const {   
         // nullifiers
