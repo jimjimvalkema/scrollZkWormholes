@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 window.ethers = ethers
 
-import circuit from '../circuits/smolProver/target/zkwormholesEIP7503.json';
+import circuit from '../circuits/remintProver/target/remintProver.json';
 // import { BarretenbergBackend, BarretenbergVerifier as Verifier } from '@noir-lang/backend_barretenberg';
 import { UltraHonkBackend, UltraPlonkBackend } from "@aztec/bb.js";
 import { Noir } from '@noir-lang/noir_js';
@@ -19,8 +19,11 @@ const noir = new Noir(circuit, backend)
 
 
 
-const CONTRACT_ADDRESS = "0x21d083295E2551E5815C2F0b4CB73dE2539106B7"//"0xE182977B23296FFdBbcEeAd68dd76c3ea67f447F"
+const CONTRACT_ADDRESS = "0x136f696481b7d48e6bcffe01a29c67080783a1ff"//"0xE182977B23296FFdBbcEeAd68dd76c3ea67f447F"
 const FIELD_LIMIT = 21888242871839275222246405745257275088548364400416034343698204186575808495617n //using poseidon so we work with 254 bits instead of 256
+const MAX_HASH_PATH_SIZE = 32;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
+const MAX_RLP_SIZE = 650
+
 const CHAININFO = {
   chainId: "0x8274f",
   rpcUrls: ["https://sepolia-rpc.scroll.io"],
@@ -31,6 +34,69 @@ const CHAININFO = {
     decimals: 18
   },
   blockExplorerUrls: ["https://sepolia.scrollscan.com"]
+}
+
+
+async function remintBtnHandler({ signerAddress, contract, secret, signer, remintAmountEl,remintAddresstEl,prevSpendAmount, burnBalance }) {
+  return await dumpErrorsInUi(async () => {
+    const to = remintAddresstEl.value === "" ? signerAddress : ethers.getAddress(remintAddresstEl.value)
+    const amount = ethers.parseUnits(remintAmountEl.value, 18)
+
+    const provider = contract.runner.provider
+  
+
+    const blockNumber = BigInt(await provider.getBlockNumber("latest"))
+    console.log(remintAmountEl.value, prevSpendAmount)
+    console.log({contract: contract.target, blockNumber, amount, to, secret, provider, MAX_HASH_PATH_SIZE, MAX_RLP_SIZE})
+    const proofInputs = await getProofInputs({
+      contractAddress:contract.target,
+      blockNumber,
+      withdrawAmount:amount, 
+      remintAddress:to, 
+      secret:secret, 
+      provider:provider, 
+      maxHashPathSize:MAX_HASH_PATH_SIZE, 
+      maxRlpSize:MAX_RLP_SIZE
+    })
+    console.log({ proofInputs })
+    messageUi("☝️🤓This is not the remint tx. This is to set the storage root \n<br> Note: setTrustedBlockHash is a workaround since scroll doesnt support the BLOCKHASH opcode yet")
+    const setTrustedStorageRootTx = contract.setTrustedStorageRoot(proofInputs.proofData.stateProofData.storageRoot, proofInputs.blockData.block.number)
+  
+  
+
+    const proof = createSnarkProof({ proofInputsNoirJs: proofInputs.noirJsInputs, circuit: circuit })
+    putTxInUi(await setTrustedStorageRootTx)
+    await proofTimeInfo()
+    console.log({ proof })
+    //console.log({proof})
+    // TODO make this object in a new function in getProofInputs.js
+    const remintInputs = {
+      to,
+      amount,
+      blockNumber, //blockNumber: BigInt(proofInputs.blockData.block.number),
+      nullifierId: proofInputs.proofData.nullifierData.nullifierId,
+      nullifier: proofInputs.proofData.nullifierData.nullifier,
+      snarkProof: ethers.hexlify((await proof).proof),
+
+    }
+    // console.log("------------remint tx inputs----------------")
+    console.log({ remintInputs })
+    // console.log("---------------------------------------")
+   
+    await (await setTrustedStorageRootTx).wait(1)
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+    // TODO make wrapped function inside getProofInputs that consumes the remintInputs
+    const remintTx = await contract.reMint(remintInputs.to, remintInputs.amount, remintInputs.blockNumber, remintInputs.nullifierId, remintInputs.nullifier, remintInputs.snarkProof)
+
+
+    await putTxInUi(await remintTx)
+    await remintTx.wait(1)
+
+    //TODO this is janky af
+    await refreshUiInfo({ contract, signer })
+  })
+
 }
 
 
@@ -114,7 +180,7 @@ function messageUi(message, append = false) {
 
 async function putTxInUi(tx) {
   const explorer = CHAININFO.blockExplorerUrls[0]
-  const url = `${explorer}/tx/${tx.hash}`
+  const url = `${explorer}/tx/${(await tx).hash}`
   messageUi(`tx submitted: <a href=${url}>${url}</a>`)
   return tx
 }
@@ -172,7 +238,7 @@ async function makeRemintUi({ secret, burnBalance, burnAddress, txHash, from, co
   const li = document.createElement("li")
 
   // @optimisation cache the latest nonce and prevSpend amount so we dont need a full resync on every page load and spend
-  const { prevSpendAmount } = await findLatestNonce(secret, contract)
+  const { prevSpendAmount } = await findLatestNonce({secret, tokenContract:contract})
 
   //button
   //const nullifier = hashNullifier(secret)
@@ -277,7 +343,7 @@ function complainAboutSharedBufferArray() {
   }
 }
 
-async function createSnarkProof({ proofInputsNoirJs, circuit = circuit }) {
+async function proofTimeInfo() {
   if (window.crossOriginIsolated === false) {
     messageUi(`
       \n<br>
@@ -291,11 +357,14 @@ async function createSnarkProof({ proofInputsNoirJs, circuit = circuit }) {
   if (window.crossOriginIsolated) {
     const b = await backend.instantiate()
     messageUi(`
-      wow window.crossOriginIsolated is set to true
-      i can use ${JSON.stringify(backend.backendOptions)} cores now 😎
+      🤖 Generating zkproof 🤖 \n <br>
+      DEBUG: window.crossOriginIsolated is set to true. \n<br>
+      we got ${JSON.stringify(backend.backendOptions)} cores now 😎 \n <br>
       `)
   }
+}
 
+async function createSnarkProof({ proofInputsNoirJs, circuit = circuit }) {
 
   // pre noirjs 0.31.0 \/
   //const proof = await noir.generateProof(proofInputsNoirJs);
@@ -312,59 +381,6 @@ async function createSnarkProof({ proofInputsNoirJs, circuit = circuit }) {
   return proof
 }
 
-async function remintBtnHandler({ signerAddress, contract, secret, signer, remintAmountEl,remintAddresstEl,prevSpendAmount, burnBalance }) {
-  return await dumpErrorsInUi(async () => {
-    const to = remintAddresstEl.value === "" ? signerAddress : ethers.getAddress(remintAddresstEl.value)
-    const amount = ethers.parseUnits(remintAmountEl.value, 18)
-
-    const provider = contract.runner.provider
-    const MAX_HASH_PATH_SIZE = 23;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
-    const MAX_RLP_SIZE = 650
-
-    const blockNumber = BigInt(await provider.getBlockNumber("latest"))
-    console.log("aaaaaaaaaaaaaaaaaaaaaaaaaa")
-    console.log(remintAmountEl.value, prevSpendAmount)
-    console.log({contract: contract.target, blockNumber, amount, to, secret, provider, MAX_HASH_PATH_SIZE, MAX_RLP_SIZE})
-    const proofInputs = await getProofInputs(contract.target, blockNumber, amount, to, secret, provider, MAX_HASH_PATH_SIZE, MAX_RLP_SIZE)
-    console.log({ proofInputs })
-
-
-    const proof = await createSnarkProof({ proofInputsNoirJs: proofInputs.noirJsInputs, circuit: circuit })
-    console.log({ proof })
-    //console.log({proof})
-    // TODO make this object in a new function in getProofInputs.js
-    const remintInputs = {
-      to,
-      amount,
-      blockNumber, //blockNumber: BigInt(proofInputs.blockData.block.number),
-      nullifierId: proofInputs.proofData.nullifierData.nullifierId,
-      nullifier: proofInputs.proofData.nullifierData.nullifier,
-      snarkProof: ethers.hexlify(proof.proof),
-
-    }
-    // console.log("------------remint tx inputs----------------")
-    console.log({ remintInputs })
-    // console.log("---------------------------------------")
-    messageUi("now sign the 2 transactions the `setBlockHash` and `reMint` tx. \n<br> Note: setBlockHash is a workaround since scroll doesnt support the BLOCKHASH opcode yet")
-    const setBlockHashTx = await contract.setBlockHash(proofInputs.blockData.block.hash, remintInputs.blockNumber)
-    await putTxInUi(await setBlockHashTx)
-    messageUi("\n waiting for 1 confirmations for `setBlockHash` transaction to confirm\n<br> after that you can finally remint!!!", true)
-    await setBlockHashTx.wait(1)
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    // TODO make wrapped function inside getProofInputs that consumes the remintInputs
-    const remintTx = await contract.reMint(remintInputs.to, remintInputs.amount, remintInputs.blockNumber, remintInputs.nullifierId, remintInputs.nullifier, remintInputs.snarkProof)
-
-
-    await putTxInUi(await remintTx)
-    await remintTx.wait(1)
-
-    //TODO this is janky af
-    await refreshUiInfo({ contract, signer })
-  })
-
-}
-
 async function burnBtnHandler({ contract, decimals, signer }) {
   return await dumpErrorsInUi(async () => {
     const amountUnparsed = document.getElementById("burnAmount").value
@@ -374,7 +390,7 @@ async function burnBtnHandler({ contract, decimals, signer }) {
     const secret = getSafeRandomNumber()
     const burnAddressInput = document.getElementById("burnAddressInput")
     console.log({ burnAddressInputvalue: burnAddressInput.value })
-    const burnAddress = burnAddressInput.value === "" ? hashBurnAddress(secret) : ethers.getAddress(burnAddressInput.value);
+    const burnAddress = burnAddressInput.value === "" ? hashBurnAddress({secret}) : ethers.getAddress(burnAddressInput.value);
     const from = signer.address
     console.log({ secret, burnAddress, from, txHash: null })
     addBurnToLocalStorage({ secret, burnAddress, from, txHash: null }) // user can exit page and then submit the txs so we save the secret before the burn just in case

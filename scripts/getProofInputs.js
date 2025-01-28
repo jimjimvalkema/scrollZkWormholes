@@ -184,7 +184,7 @@ export function hashBurnAddress({secret}) {
 }
 
 // TODO find better name since it get prevSpendAmount and nonce
-export async function findLatestNonce(secret, tokenContract) {
+export async function findLatestNonce({secret, tokenContract}) {
     //console.log(JSON.stringify(tokenContract))
     let nonce = -1n // TODO clean up this while loop so nonce starts at 0n. (for readability)
     let nullifier = undefined;
@@ -242,7 +242,7 @@ export async function getRemintProofData({contractAddress, burnAddress,withdrawA
     // contract data
     const tokenContract = new ethers.Contract(contractAddress, abi, provider)
     const burnedTokenBalance = await tokenContract.balanceOf(burnAddress)
-    const {nonce, prevSpendAmount} = await findLatestNonce(secret, tokenContract)
+    const {nonce, prevSpendAmount} = await findLatestNonce({secret, tokenContract})
 
     // nullifiers
     const nullifier = hashNullifier({amount: prevSpendAmount + withdrawAmount,nonce,secret})
