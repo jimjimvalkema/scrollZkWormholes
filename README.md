@@ -140,6 +140,12 @@ get storage slots layout
 forge inspect contracts/Token.sol:Token storage --pretty > contracts/storagelayouts/Token.txt
 ```
 
+Install noirs backend
+```shell
+curl -L https://raw.githubusercontent.com/AztecProtocol/aztec-packages/refs/heads/master/barretenberg/bbup/install | bash;
+bbup -nv 0.31.0
+```
+
 Run test
 ```shell
 cd circuits/smolProver;
@@ -159,7 +165,7 @@ node scripts/getProofInputs.js --maxTreeDepth=248 --maxRlplen=850 \
 --contract=0xE182977B23296FFdBbcEeAd68dd76c3ea67f447F \
 --recipient=0x93211e420c8F552a0e4836f84892a0D4eb5D6D54 \
 --secret=123 \
---rpc=https://scroll-sepolia.drpc.org 
+--rpc=https://sepolia-rpc.scroll.io/ 
 ```
 #### smolprover
 ```shell
@@ -167,7 +173,7 @@ node scripts/getProofInputs.js --maxTreeDepth=32 --maxRlplen=650 \
 --contract=0xE182977B23296FFdBbcEeAd68dd76c3ea67f447F \
 --recipient=0x93211e420c8F552a0e4836f84892a0D4eb5D6D54 \
 --secret=123 \
---rpc=https://scroll-sepolia.drpc.org \
+--rpc=https://sepolia-rpc.scroll.io/ \
 ``` -->
 
 ## notes
