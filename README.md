@@ -9,7 +9,7 @@ Using storage proofs to track the balances of the burn addresses instead of comm
 ![ui](./screenshots/2burns1remintui.png)  
 
 ### deploymed on scroll sepolia
-https://sepolia.scrollscan.com/address/0x12b65F787D7A4672218cA4375f79133564328B28
+https://sepolia.scrollscan.com/address/0xf0192bE9cf4ea296E05FfFe33271133Bbe032AdF
 
 ## WARNING
 This version is not mainnet ready since it uses a workaround that allows **ANYONE** to mint free tokens.  
@@ -94,8 +94,10 @@ yarn compile-contracts;
 
 ### deploy
 ```shell
+rm -fr ignition/deployments
 yarn hardhat run scripts/deploy.cjs --network scrollSepolia;
 yarn hardhat ignition deploy ignition/modules/Token.cjs --network scrollSepolia --verify #couldnt verify within deploy.cjs so this is a hacky work around
+
 ```
 
 
@@ -114,8 +116,14 @@ yarn hardhat run scripts/proofAndRemint.js
 ## test circuit
 Install noir
 ```shell
-curl -L https://raw.githubusercontent.com/noir-lang/noirup/refs/heads/main/install | bash
+curl -L https://raw.githubusercontent.com/noir-lang/noirup/refs/heads/main/install | bash;
 noirup -v 0.31.0
+```
+
+Install noirs backend
+```shell
+curl -L https://raw.githubusercontent.com/AztecProtocol/aztec-packages/refs/heads/master/barretenberg/bbup/install | bash;
+bbup -nv 0.31.0
 ```
 
 Run test
@@ -137,7 +145,7 @@ node scripts/getProofInputs.js --maxTreeDepth=248 --maxRlplen=850 \
 --contract=0xDb9Fb1e8d6A0b9C0072D3E88f8330ec9Cc62E21f \
 --recipient=0x93211e420c8F552a0e4836f84892a0D4eb5D6D54 \
 --secret=123 \
---rpc=https://scroll-sepolia.drpc.org 
+--rpc=https://sepolia-rpc.scroll.io/ 
 ```
 #### smolprover
 ```shell
@@ -145,7 +153,7 @@ node scripts/getProofInputs.js --maxTreeDepth=32 --maxRlplen=650 \
 --contract=0xDb9Fb1e8d6A0b9C0072D3E88f8330ec9Cc62E21f \
 --recipient=0x93211e420c8F552a0e4836f84892a0D4eb5D6D54 \
 --secret=123 \
---rpc=https://scroll-sepolia.drpc.org \
+--rpc=https://sepolia-rpc.scroll.io/ \
 ``` -->
 
 ## notes

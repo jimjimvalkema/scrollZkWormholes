@@ -1,11 +1,11 @@
-// Verification Key Hash: 89500e534fdaa376726bd9ef59666ea10e634e31b15c92c9dcf7cd696a4aa213
+// Verification Key Hash: 84728ade803ec6007e8358067bc9bd3e35578d1f35680a57bf74671b6cde42bb
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Aztec
 pragma solidity 0.8.23;
 
 library UltraVerificationKey {
     function verificationKeyHash() internal pure returns(bytes32) {
-        return 0x89500e534fdaa376726bd9ef59666ea10e634e31b15c92c9dcf7cd696a4aa213;
+        return 0x84728ade803ec6007e8358067bc9bd3e35578d1f35680a57bf74671b6cde42bb;
     }
 
     function loadVerificationKey(uint256 _vk, uint256 _omegaInverseLoc) internal pure {
@@ -24,8 +24,8 @@ library UltraVerificationKey {
             mstore(add(_vk, 0x160), 0x22db04d88e370a59406b83b0a0fcdc18696cb97f142f0667d7a6e8a529dcf02a) // vk.Q4.y
             mstore(add(_vk, 0x180), 0x2b22aecec6ebfe673be6e8becf0aa526172c02d68fbcfa0d331c1fc16645785f) // vk.Q_M.x
             mstore(add(_vk, 0x1a0), 0x1a1cb3d22936f851179f153b191fd4c0579047f97b2a661d92a907b065c8236a) // vk.Q_M.y
-            mstore(add(_vk, 0x1c0), 0x0ea37c36b6212a4d8fbd158ac2b110bb1f7e0a860f36c40bb8af646823238074) // vk.Q_C.x
-            mstore(add(_vk, 0x1e0), 0x21bdd53b8aa0dd1c45ea1e88080ea83c4019fc2965cf8503fbe78ae23f78686f) // vk.Q_C.y
+            mstore(add(_vk, 0x1c0), 0x0ae3d72b8c6256239da99aa4dd8fbf5e65965491d14cf14cdb71b97e71bcee4c) // vk.Q_C.x
+            mstore(add(_vk, 0x1e0), 0x2ae0d1b86506a8ae06553b967a913ba8fa8e91d25ef7692070a1c77f868ae07f) // vk.Q_C.y
             mstore(add(_vk, 0x200), 0x15aa147f0db7803bb1e02a31d7d4adeed9b77da40548064252e047df7c4bb6f0) // vk.Q_ARITHMETIC.x
             mstore(add(_vk, 0x220), 0x022c3293175ead6465557cd8c9526a3e7e862ddfd92dc76e551bda02d65a9708) // vk.Q_ARITHMETIC.y
             mstore(add(_vk, 0x240), 0x1f91c4f99eb4ab76f042b64aed9af336fd65e83e07cbd357fccf64c277622e69) // vk.QSORT.x
