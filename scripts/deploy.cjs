@@ -14,7 +14,7 @@ const SMOLPROVER_SOLIDITY_VERIFIER_DESTINATION = __dirname+"/../contracts/SmolVe
 
 
 //TODO use hardhat vars
-const PROVIDERURL = "https://scroll-sepolia.drpc.org"
+const PROVIDERURL = "https://sepolia-rpc.scroll.io/"
 const provider = new ethers.JsonRpcProvider(PROVIDERURL)
 
 async function main() {

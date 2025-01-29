@@ -257,7 +257,7 @@ async function setDefaults(args) {
         contract: "0xDb9Fb1e8d6A0b9C0072D3E88f8330ec9Cc62E21f",
         recipient: "0x93211e420c8F552a0e4836f84892a0D4eb5D6D54",
         secret: 123,
-        rpc:  "https://scroll-sepolia.drpc.org",
+        rpc:  "https://sepolia-rpc.scroll.io/",
         blocknumber: "latest", 
         maxTreeDepth: MAX_HASH_PATH_SIZE, 
         maxRlplen: MAX_RLP_SIZE

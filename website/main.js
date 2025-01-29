@@ -3,6 +3,7 @@ window.ethers = ethers
 
 import circuit from '../circuits/smolProver/target/zkwormholesEIP7503.json';
 import { BarretenbergBackend, BarretenbergVerifier as Verifier } from '@noir-lang/backend_barretenberg';
+
 import { Noir } from '@noir-lang/noir_js';
 
 
@@ -18,7 +19,10 @@ const noir = new Noir(circuit, backend)
 
 
 
-const CONTRACT_ADDRESS = "0x12b65F787D7A4672218cA4375f79133564328B28"
+
+
+
+const CONTRACT_ADDRESS = "0xf0192bE9cf4ea296E05FfFe33271133Bbe032AdF"
 const FIELD_LIMIT = 21888242871839275222246405745257275088548364400416034343698204186575808495617n //using poseidon so we work with 254 bits instead of 256
 const CHAININFO = {
   chainId: "0x8274f",
