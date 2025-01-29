@@ -2,24 +2,16 @@
 # yarn lockfile v1
 
 
-"@aztec/bb.js@0.41.0":
-  version "0.41.0"
-  resolved "https://registry.yarnpkg.com/@aztec/bb.js/-/bb.js-0.41.0.tgz#4753b36bf7873918d7676cf3b1b4356674a5bff0"
-  integrity sha512-Uqez8YRu+nlPdXfrqeEBF/Mz3OhhK39zXL4gzN/pGhp4FlEkeTLpCx7etHXz6aodyjri6lQCv219tGXG2IAQoA==
+"@aztec/bb.js@0.66.0":
+  version "0.66.0"
+  resolved "https://registry.yarnpkg.com/@aztec/bb.js/-/bb.js-0.66.0.tgz#011a2f6e7ab9f01c71d8e1cfadde34dcfd21b128"
+  integrity sha512-x6VXq2/9dI12HsCFe1nzTXISHkjJ2VxtT+r+OCT5rmNEreLiaSc5g0ll1hRC3wMXSCexLRmlrYnhkgWJWD3Zzw==
   dependencies:
     comlink "^4.4.1"
     commander "^10.0.1"
     debug "^4.3.4"
-    tslib "^2.4.0"
-
-"@aztec/bb.js@0.47.1":
-  version "0.47.1"
-  resolved "https://registry.yarnpkg.com/@aztec/bb.js/-/bb.js-0.47.1.tgz#12eef70be6df816af9122448fdafffcaf59eef2e"
-  integrity sha512-3SmRF+suvNZkheCWGU7jH/reEHXkAjMo7q5u/xoLFL0Rn/1HZQN0W6o6Sd3QUoopCwVWQIJ66YwalaRaslP41Q==
-  dependencies:
-    comlink "^4.4.1"
-    commander "^10.0.1"
-    debug "^4.3.4"
+    fflate "^0.8.0"
+    pako "^2.1.0"
     tslib "^2.4.0"
 
 "@esbuild/aix-ppc64@0.21.5":
@@ -158,40 +150,31 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
-"@noir-lang/acvm_js@0.47.0":
-  version "0.47.0"
-  resolved "https://registry.yarnpkg.com/@noir-lang/acvm_js/-/acvm_js-0.47.0.tgz#95e4c3b52184fd2af997f9f69c73777e10d6b4e4"
-  integrity sha512-wS1Nx9Pcr2NXwayWz1OzuweiFuE/2nGWkpkxDDoCiY2TU6G8rfuxL2R0Z018n+emDTTxGLAeuf1WdQg5ZVAVFA==
+"@noir-lang/acvm_js@1.0.0-beta.1":
+  version "1.0.0-beta.1"
+  resolved "https://registry.yarnpkg.com/@noir-lang/acvm_js/-/acvm_js-1.0.0-beta.1.tgz#d10cda3232bdbc307266ab6efdcc51a9b700679b"
+  integrity sha512-4lWC543pScZ+NG8hqB0xOLfdgqCQJaclrdQ8GVIj7jwZ8mS982XV97IKfglqgE7Ovcik2j8QRHZq5FaVR/Bn9w==
 
-"@noir-lang/backend_barretenberg@0.31.0":
-  version "0.31.0"
-  resolved "https://registry.yarnpkg.com/@noir-lang/backend_barretenberg/-/backend_barretenberg-0.31.0.tgz#63d75925c8e1e143cdd86c92fe295b2428bc0da9"
-  integrity sha512-bVmv6O2BX3wUyrT5dmY9Z5oABTFYsBBtSMOA5nGalyKsZPaIwwBXpk8rF90IhR6U6jh6uZMOhzpKHbZl4WBXKA==
+"@noir-lang/noir_js@1.0.0-beta.1":
+  version "1.0.0-beta.1"
+  resolved "https://registry.yarnpkg.com/@noir-lang/noir_js/-/noir_js-1.0.0-beta.1.tgz#ae115dc07da38e8c8900d4a3c952642f5ec49811"
+  integrity sha512-QiRHYKkuHDPWdEhuU3SCUAuOZm0KR766S+Pd0nKpRfAcX1p5MDEDS9ij8me3CTAIhVb/VHNx25zUE/i4zs1sDg==
   dependencies:
-    "@aztec/bb.js" "0.41.0"
-    "@noir-lang/types" "0.31.0"
-    fflate "^0.8.0"
+    "@noir-lang/acvm_js" "1.0.0-beta.1"
+    "@noir-lang/noirc_abi" "1.0.0-beta.1"
+    "@noir-lang/types" "1.0.0-beta.1"
 
-"@noir-lang/noir_js@0.31.0":
-  version "0.31.0"
-  resolved "https://registry.yarnpkg.com/@noir-lang/noir_js/-/noir_js-0.31.0.tgz#8fbb370902ef9d1bfb2c0694f4760c24591028e6"
-  integrity sha512-LCpArXg5CpM7IDQMga8mRJCGUobjC3Ckbj6F+aKiJbteVmFJzymlu36sYLOZBE0JDFZ6gu1uPujBt3I6KWfrIw==
+"@noir-lang/noirc_abi@1.0.0-beta.1":
+  version "1.0.0-beta.1"
+  resolved "https://registry.yarnpkg.com/@noir-lang/noirc_abi/-/noirc_abi-1.0.0-beta.1.tgz#8ecd9a9408aafba275b889b845cba77386742148"
+  integrity sha512-Me2LrH57YZl47UvHnzPd02pw8H9snJLob6dv6clbFB7ac6Y8jZvH/YhNGOejgj1fudr/J/V6o+YZaf4oLpxtMg==
   dependencies:
-    "@noir-lang/acvm_js" "0.47.0"
-    "@noir-lang/noirc_abi" "0.31.0"
-    "@noir-lang/types" "0.31.0"
+    "@noir-lang/types" "1.0.0-beta.1"
 
-"@noir-lang/noirc_abi@0.31.0":
-  version "0.31.0"
-  resolved "https://registry.yarnpkg.com/@noir-lang/noirc_abi/-/noirc_abi-0.31.0.tgz#42ee78aab44646d1ff150fb5d8ffb477c6133447"
-  integrity sha512-Y3O2UjKaM0hvrDwPvEtP9DIbKf8aQqPdk7utrK5hGOBTFIERKIVzibhXoLBGtmDaDsm95aIKQOu3IJqYCQHVbw==
-  dependencies:
-    "@noir-lang/types" "0.31.0"
-
-"@noir-lang/types@0.31.0":
-  version "0.31.0"
-  resolved "https://registry.yarnpkg.com/@noir-lang/types/-/types-0.31.0.tgz#cce1d58fd2decfb5160a84c06a522adf357b6785"
-  integrity sha512-KNLJ/KnvLBLo3pVg6IJWIMPRUYs8fkIngIFdtzHaaovctYpAsUKAF4KKh8ITaSEk7hLAIiHjLunSfQ8wSe7HOA==
+"@noir-lang/types@1.0.0-beta.1":
+  version "1.0.0-beta.1"
+  resolved "https://registry.yarnpkg.com/@noir-lang/types/-/types-1.0.0-beta.1.tgz#4fe9062a8209c9e0987cc41c9506cc4423004b8f"
+  integrity sha512-rcisXDdKNLA7mh0Ll9j3MGG5BP3W52K3Owr0+opJhs+4jHoAx1Gb5vGNG9s6nYb2i21VZMgOzKVvBd25ck0b9w==
 
 "@rollup/rollup-android-arm-eabi@4.32.1":
   version "4.32.1"
@@ -567,10 +550,10 @@ ms@^2.1.3:
   resolved "https://registry.yarnpkg.com/ms/-/ms-2.1.3.tgz#574c8138ce1d2b5861f0b44579dbadd60c6615b2"
   integrity sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==
 
-nanoid@^3.3.8:
-  version "3.3.8"
-  resolved "https://registry.yarnpkg.com/nanoid/-/nanoid-3.3.8.tgz#b1be3030bee36aaff18bacb375e5cce521684baf"
-  integrity sha512-WNLf5Sd8oZxOm+TzppcYk8gVOgP+l58xNy58D0nbUnOxOWRWvlcCV4kUF7ltmI6PsrLl/BgKEyS4mqsGChFN0w==
+nanoid@^3.3.7:
+  version "3.3.7"
+  resolved "https://registry.yarnpkg.com/nanoid/-/nanoid-3.3.7.tgz#d0c301a691bc8d54efa0a2226ccf3fe2fd656bd8"
+  integrity sha512-eSRppjcPIatRIMC1U6UngP8XFcz8MQWGQdt1MTBQ7NaAmvXDfvNxbvWV3x2y6CdEUciCSsDHDQZbhYaB8QEo2g==
 
 once@^1.3.0:
   version "1.4.0"
@@ -578,6 +561,11 @@ once@^1.3.0:
   integrity sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==
   dependencies:
     wrappy "1"
+
+pako@^2.1.0:
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/pako/-/pako-2.1.0.tgz#266cc37f98c7d883545d11335c00fbd4062c9a86"
+  integrity sha512-w+eufiZ1WuJYgPXbV/PO3NCMEc3xqylkKHzp8bxp1uW4qaSNQUkwmLLEc3kKsfz8lpV1F8Ht3U1Cm+9Srog2ug==
 
 path-is-absolute@^1.0.0:
   version "1.0.1"
@@ -686,10 +674,10 @@ tslib@^2.4.0:
   resolved "https://registry.yarnpkg.com/tslib/-/tslib-2.8.1.tgz#612efe4ed235d567e8aba5f2a5fab70280ade83f"
   integrity sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==
 
-undici-types@~6.20.0:
-  version "6.20.0"
-  resolved "https://registry.yarnpkg.com/undici-types/-/undici-types-6.20.0.tgz#8171bf22c1f588d1554d55bf204bc624af388433"
-  integrity sha512-Ny6QZ2Nju20vw1SRHe3d9jVu6gJ+4e3+MMpqu7pqE5HT6WsTSlce++GQmK5UXS8mzV8DSYHrQH+Xrf2jVcuKNg==
+undici-types@~6.13.0:
+  version "6.13.0"
+  resolved "https://registry.yarnpkg.com/undici-types/-/undici-types-6.13.0.tgz#e3e79220ab8c81ed1496b5812471afd7cf075ea5"
+  integrity sha512-xtFJHudx8S2DSoujjMd1WeWvn7KKWFRESZTMeL1RptAYERu29D6jphMjjY+vn96jvN3kVPDNxU/E13VTaXj6jg==
 
 universalify@^0.1.0:
   version "0.1.2"

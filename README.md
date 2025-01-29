@@ -3,13 +3,13 @@ An erc20 token with [EIP7503](https://eips.ethereum.org/EIPS/eip-7503) (zkwormho
 Using storage proofs to track the balances of the burn addresses instead of commitments in a merkle tree. 
 
 **Try it out here: https://scrollzkwormholes.jimjim.dev/**  
-*Or on ipfs: https://bafybeichjrwquiabspceeyvz5mkysszjno5cgj6a4vrfp2sthsfiszehjy.ipfs.dweb.link/*
+*Or on ipfs: https://bafybeia3aeuhou4jwtoakvds7ya5qxe5hwjqchmabvvvuwvd6thnqubgzm.ipfs.dweb.link/*
 
 
 ![ui](./screenshots/2burns1remintui.png)  
 
-### deploymed on scroll sepolia
-https://sepolia.scrollscan.com/address/0xf0192bE9cf4ea296E05FfFe33271133Bbe032AdF
+### deploymend on scroll sepolia
+https://sepolia.scrollscan.com/address/0x136F696481b7d48e6BcffE01a29c67080783A1ff
 
 ## WARNING
 This version is not mainnet ready since it uses a workaround that allows **ANYONE** to mint free tokens.  
@@ -68,6 +68,9 @@ The original EIP doesn't specify this but there are a number of features i like 
 **improve proving time:** with proof recursion and a `historicStorageRoots` in a public mapping in the contract.  
 
 ## run ui locally
+<!--
+TODO put all install shit here
+-->
 ### install
 ```shell
 yarn install;
@@ -89,15 +92,16 @@ yarn build
 ```shell
 yarn hardhat vars set PRIVATE_KEY; #<=deployment key
 yarn hardhat vars set SEPOLIA_SCROLL_ETHERSCAN_KEY;
-yarn compile-contracts;
+yarn compile-contracts; #why??
 ```
 
 ### deploy
 ```shell
-rm -fr ignition/deployments
+rm -fr ignition/deployments;
 yarn hardhat run scripts/deploy.cjs --network scrollSepolia;
-yarn hardhat ignition deploy ignition/modules/Token.cjs --network scrollSepolia --verify #couldnt verify within deploy.cjs so this is a hacky work around
 
+#couldnt verify within deploy.cjs so this is a hacky work around
+yarn hardhat ignition deploy ignition/modules/Token.cjs --network scrollSepolia --verify 
 ```
 
 
@@ -115,9 +119,25 @@ yarn hardhat run scripts/proofAndRemint.js
 
 ## test circuit
 Install noir
+nargo
 ```shell
 curl -L https://raw.githubusercontent.com/noir-lang/noirup/refs/heads/main/install | bash;
-noirup -v 0.31.0
+source ~/.bashrc;
+noirup -v 0.32.0;
+source ~/.bashrc;
+```
+barretenberg
+```shell
+curl -L https://raw.githubusercontent.com/AztecProtocol/aztec-packages/refs/heads/master/barretenberg/bbup/install | bash;
+source ~/.bashrc;
+bbup -nv 0.32.0;
+source ~/.bashrc;
+sudo apt install libc++-dev;
+```
+
+get storage slots layout
+```shell
+forge inspect contracts/Token.sol:Token storage --pretty > contracts/storagelayouts/Token.txt
 ```
 
 Install noirs backend
@@ -142,7 +162,7 @@ yarn compile-circuits
 #### fullprover  
 ```shell
 node scripts/getProofInputs.js --maxTreeDepth=248 --maxRlplen=850 \
---contract=0xDb9Fb1e8d6A0b9C0072D3E88f8330ec9Cc62E21f \
+--contract=0xE182977B23296FFdBbcEeAd68dd76c3ea67f447F \
 --recipient=0x93211e420c8F552a0e4836f84892a0D4eb5D6D54 \
 --secret=123 \
 --rpc=https://sepolia-rpc.scroll.io/ 
@@ -150,7 +170,7 @@ node scripts/getProofInputs.js --maxTreeDepth=248 --maxRlplen=850 \
 #### smolprover
 ```shell
 node scripts/getProofInputs.js --maxTreeDepth=32 --maxRlplen=650 \
---contract=0xDb9Fb1e8d6A0b9C0072D3E88f8330ec9Cc62E21f \
+--contract=0xE182977B23296FFdBbcEeAd68dd76c3ea67f447F \
 --recipient=0x93211e420c8F552a0e4836f84892a0D4eb5D6D54 \
 --secret=123 \
 --rpc=https://sepolia-rpc.scroll.io/ \
@@ -213,4 +233,8 @@ modify `../scripts/getScrollProof.js` at getBlockHeaderRlp() for mainnet
 *https://github.com/jimjimvalkema/scrollZkStorageProofs/blob/main/scripts/getScrollProof.js#L259*
 
 
-### 
+### scroll bugs
+this [address (0x3040f)](https://sepolia.scrollscan.com/token/0xe182977b23296ffdbbceead68dd76c3ea67f447f?a=0x3040f6436F0c4533587000EC5C36f5272Cc10Cd5) has 10 tokens but the storage proof from the scroll sepolia rpc returns a proof where it has 840 tokens
+0x3040f6436F0c4533587000EC5C36f5272Cc10Cd5
+
+This is most recent commit with that contract: https://github.com/jimjimvalkema/scrollZkWormholes/commit/e7d632651d07c1b6a328a0fde0d4296799f5d069

@@ -1,8 +1,0 @@
-[package]
-name = "zkwormholesEIP7503/"
-type = "bin"
-authors = [""]
-compiler_version = ">=0.31.0"
-
-[dependencies]
-ScrollStorageProver = { path = "../../submodules/scrollZkStorageProofs/circuits/lib/" }

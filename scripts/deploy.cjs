@@ -3,14 +3,20 @@
 
 const verifiersModule = require("../ignition/modules/Verifiers.cjs");
 const tokenModule = require("../ignition/modules/Token.cjs")
-const {setContractCircuit} = require("./setContractAddresCircuit.cjs")
+// const {setContractCircuit} = require("./setContractAddresCircuit.cjs")
+const {generateSolidityVerifier} = require("./generateSolidityVerifier.cjs")
 // const Verifiers = require("../ignition/modules/Verifiers.cjs");
 
-const FULLPROVER_MAIN = __dirname+"/../circuits/fullProver/src/main.nr"
-const FULLPROVER_SOLIDITY_VERIFIER_DESTINATION = __dirname+"/../contracts/FullVerifier.sol"
+const REMINTPROVER_CIRCUIT_ROOT = __dirname+"/../circuits/remintProver/"
+const REMINTPROVER_CIRCUIT_NAME = "remintProver"
+const REMINTPROVER_VERIFIER_NAME = "RemintVerifier"
 
-const SMOLPROVER_MAIN = __dirname+"/../circuits/smolProver/src/main.nr"
-const SMOLPROVER_SOLIDITY_VERIFIER_DESTINATION = __dirname+"/../contracts/SmolVerifier.sol"
+const STORAGEROOT_CIRCUIT_ROOT = __dirname+"/../circuits/storageRootProver/"
+const STORAGEROOT_CIRCUIT_NAME = "storageRootProver"
+const STORAGEROOT_VERIFIER_NAME = "StorageRootVerifier"
+
+
+const CONTRACTS_ROOT = __dirname + "/../contracts"
 
 
 //TODO use hardhat vars
@@ -22,24 +28,28 @@ async function main() {
   const tokenAddress = await token.getAddress()
   await token.waitForDeployment()
   await new Promise(resolve => setTimeout(resolve, 60000));//1 min // we rely on eth_getProof to set constants of circuit.
-  console.log(`generating verifier contracts code with new token address: ${tokenAddress}`)
+  // console.log(`generating verifier contracts code with new token address: ${tokenAddress}`)
   const generatedSolidityVerifiers = await Promise.all([
-    setContractCircuit(tokenAddress, FULLPROVER_MAIN, FULLPROVER_SOLIDITY_VERIFIER_DESTINATION, "FullVerifier", provider), 
-    setContractCircuit(tokenAddress, SMOLPROVER_MAIN, SMOLPROVER_SOLIDITY_VERIFIER_DESTINATION, "SmolVerifier", provider)
+    generateSolidityVerifier(REMINTPROVER_CIRCUIT_ROOT, REMINTPROVER_CIRCUIT_NAME, REMINTPROVER_VERIFIER_NAME, CONTRACTS_ROOT),
+    generateSolidityVerifier(STORAGEROOT_CIRCUIT_ROOT, STORAGEROOT_CIRCUIT_NAME ,STORAGEROOT_VERIFIER_NAME, CONTRACTS_ROOT)
+    // setContractCircuit(tokenAddress, FULLPROVER_MAIN, FULLPROVER_SOLIDITY_VERIFIER_DESTINATION, "RemintVerifier", provider), 
+    // setContractCircuit(tokenAddress, SMOLPROVER_MAIN, SMOLPROVER_SOLIDITY_VERIFIER_DESTINATION, "StoragerootVerifier", provider)
   ])
   console.log(`succesfully generated verifiers: ${JSON.stringify(generatedSolidityVerifiers)}`)
   await new Promise(resolve => setTimeout(resolve, 10000));
+
+  //compile and depoly
   await hre.run("compile") // hre.ignition.deploy doesnt recompile inside hardhat run,  recompile happens when "npx hardhat run script/deploy.cjs" is run. so contracts modified in here dont get recompilled i have spend days trying to fix a bug created by this issue :(
-  const { FullVerifier, SmolVerifier } = await hre.ignition.deploy(verifiersModule,{
+    const {  RemintVerifier, StorageRootVerifier } = await hre.ignition.deploy(verifiersModule,{
     parameters: { VerifiersModule: {tokenAddress}  },
   });
-  await FullVerifier.waitForDeployment()
-  await SmolVerifier.waitForDeployment()
+  await RemintVerifier.waitForDeployment()
+  await StorageRootVerifier.waitForDeployment()
   console.log(`
     token deployed to: ${tokenAddress}
     with verifiers to: 
-      FullVerifier:${await FullVerifier.getAddress()}, 
-      SmolVerifier: ${await SmolVerifier.getAddress()})}
+      ${REMINTPROVER_VERIFIER_NAME}:${await RemintVerifier.getAddress()}, 
+      ${STORAGEROOT_VERIFIER_NAME}: ${await StorageRootVerifier.getAddress()})}
   `);
 
   // TODO keep the compiled circuit somewhere safe where we can track wich address there deployed to
