@@ -2,7 +2,7 @@ import { ethers } from 'ethers';
 window.ethers = ethers
 
 import circuit from '../circuits/smolProver/target/zkwormholesEIP7503.json';
-import { BarretenbergBackend, BarretenbergVerifier as Verifier } from '@noir-lang/backend_barretenberg';
+import { BarretenbergBackend} from '@noir-lang/backend_barretenberg';
 
 import { Noir } from '@noir-lang/noir_js';
 
