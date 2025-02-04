@@ -1,5 +1,5 @@
-# example of a erc20 with EIP7503 
-An erc20 token with [EIP7503](https://eips.ethereum.org/EIPS/eip-7503) (zkwormholes) style private transfers.  
+# An erc20 with EIP7503, partial spends and reusable address
+An erc20 token with [EIP7503](https://eips.ethereum.org/EIPS/eip-7503) (zkwormholes) style private transfers, and a new nullifier scheme to enable partial spends and reusable burnaddresses.  
 *More info in [docs/notes.md](https://github.com/jimjimvalkema/scrollZkWormholes/blob/main/docs/notes.md#L1)*
 
 **Try it out here: https://scrollzkwormholes.jimjim.dev/**  
