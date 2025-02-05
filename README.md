@@ -9,10 +9,10 @@ An erc20 token with [EIP7503](https://eips.ethereum.org/EIPS/eip-7503) (zkwormho
 ![ui](./screenshots/2burns1remintui.png)  
 
 ### deploymend on scroll sepolia
-https://sepolia.scrollscan.com/address/0x136F696481b7d48e6BcffE01a29c67080783A1ff
+https://sepolia.scrollscan.com/address/0x6563cfc28f56b112Db0e8d6BF420590E92631368
 
 ## WARNING WORK IN PROGRESS
-The code here in barely tested and has 3 bugs that are inflation bugs.  
+The code here in barely tested and has 3 inflation bugs.  
 These are: anyone can call `setTrustedStorageRoot` and `mint`.  
 Also EOA<->zkwormhole address collisions can be created.  
 *More info in [docs/notes.md](https://github.com/jimjimvalkema/scrollZkWormholes/blob/main/docs/notes.md#L8)*
@@ -25,21 +25,19 @@ yarn install;
 yarn install-submodules && yarn install-vite;
 ```
 ### Install noir
-nargo
+nargo  
+https://noir-lang.org/docs/getting_started/quick_start#noir
 ```shell
-curl -L https://raw.githubusercontent.com/noir-lang/noirup/refs/heads/main/install | bash;
-source ~/.bashrc;
-noirup -v 0.32.0;
-source ~/.bashrc;
+noirup -v 1.0.0-beta.1;
 ```
-barretenberg
+barretenberg  
+https://noir-lang.org/docs/getting_started/quick_start#proving-backend  
 ```shell
-curl -L https://raw.githubusercontent.com/AztecProtocol/aztec-packages/refs/heads/master/barretenberg/bbup/install | bash;
-source ~/.bashrc;
-bbup -nv 0.32.0;
-source ~/.bashrc;
-sudo apt install libc++-dev;
+bbup -v 0.66.0
 ```
+<!-- ```shell
+bbup -v 1.0.0-beta.1;
+``` -->
 
 ## Run ui locally
 ```shell
@@ -64,8 +62,12 @@ yarn compile-contracts;
 ```shell
 rm -fr ignition/deployments;
 yarn hardhat run scripts/deploy.cjs --network scrollSepolia;
+cp artifacts/contracts/Token.sol/Token.json website/abis/Token.json;
 yarn hardhat ignition deploy ignition/modules/Token.cjs --network scrollSepolia --verify 
 ```
+you need to manually change the contract address:  
+ui: [website/main.js](https://github.com/jimjimvalkema/scrollZkWormholes/blob/main/) at line 22     
+ui: [scripts/proofAndRemint.js](https://github.com/jimjimvalkema/scrollZkWormholes/blob/main/scripts/proofAndRemint.js#L213) at line 213    
 
 
 ## Test

@@ -1,9 +1,9 @@
-## What is ZKwormholes EIP7503
-[ZKwormholes](https://eips.ethereum.org/EIPS/eip-7503) is a new method for depositing from a public address into a privacy protocol.  
+## What is ZKwormholes EIP-7503
+ZKwormholes *([EIP-7503](https://eips.ethereum.org/EIPS/eip-7503))* is a new method for *depositing* **from a public address into a private address** with **plausible deniability**.  
 It differs from conventinal methods because it doesn't reveal that an user made a deposit into a privacy protocol. Instead it looks like a "normal" transfer.      
 In contrast to protocols like zcash, tornadocash, etc, where it's publicly "announced" when a user with public money sends to a private address.  
-Under the hood these zkwormole private addresses do not have a private key, so these funds are burned. The protocol then allows the user to "re-mint" these burned coins to an unlinked address, only if they can provide the zk-proof that no private key exist for the burn address.
-
+It works by sending ETH to an address that isn't generated "correctly" like other EOAs. *ex: `address=poseidonHash(secret)`.* 
+And then a zero knowledge proof is used to proof that the user knows **the secret** of **an address**, and is then allowed the **"re-mint" the account balance** of that account.
 
 ## KNOWN SECURITY ISSUES
 The code here in untested and has 3 bugs that cause an inflation bug:
@@ -26,8 +26,8 @@ function hashBurnAddress(secret) {
 *https://github.com/jimjimvalkema/scrollZkWormholes/blob/main/scripts/getProofInputs.js#L180*
 
 ## Partial spends, Address reusability
-### original eip
-The original eip suggested nullifying the entire address, which means that it becomes a **real burn address** after a re-mint and requires the user to remint the entire amount.   
+### Original EIP
+The original EIP suggested nullifying the entire address, which means that it becomes a **real burn address** after a re-mint and requires the user to remint the entire amount.   
 
 ### Account based nullifiers
 I instead created an account based nullifier scheme that allows the user to **reuse the address** and remint **any amount**. The nullifier doenst nullify the entire address, instead it **nullifies the totall amount spent**. This is done in a way that does **not link the remint txs** toghether and does **not reveal the totall amount spent**. 
@@ -36,7 +36,7 @@ The scheme is simply put a **Key/Value pair** linked to the burnaddress, whith t
 For the key we do `nullifierKey=poseidonHash(nonce,secret)` the secret here links the nullifierId to the burn address.  
 For the value we could do just hash the totallAmountSpent. But this would be silly easy to guess in a preimg attack. So we add the nonce + secret as salt: `nullifierValue=poseidonHash(TotallAmount,nonce,secret)`
 
-### syncing
+### Syncing
 Syncing an account requires determining the latest nonce and totallAmountSpent. This is simple and fast since the `nullifierKey` is deterministic and links to the remints txs. So we only need to do hash the `nullifierKey` starting at `nonce=0` and itter up until we no longer see `nullifierKey` exist on chain. This is much faster than UTXO style privact where you need to try and decrypt every tx onchain!  
 *In pseudocode:*
 ```js
@@ -48,47 +48,22 @@ while(true) {
     }
 }
 ```
-### circuit
+### Circuit
 The circuit checks that the nullfier is: `nullifierValue=poseidonHash(prevTotallAmount + remintAmount,nonce+1,secret)`. And then also checks the previous nullifier through a storage proof as secret input.  
-**real circuit is slightly different: https://github.com/jimjimvalkema/scrollZkWormholes/blob/main/circuits/remintProver/src/main.nr#L125**
+*real circuit is slightly different: https://github.com/jimjimvalkema/scrollZkWormholes/blob/main/circuits/remintProver/src/main.nr#L125*
 
 
+### privacy
+You can characterize the privacy achieved by zkwormhole accounts to **hide only the sender**. 
 
 
 ## Why on scroll / Commitment tree
 Scroll is a zkrollup that uses a sparse binairy merkle tree with the poseidon hash function. Which is much faster to prove in zk circuit than ethereum MPT state tree which uses keccak. This allows me to use the storage tree as a commitment tree directly instead of building a poseidon merkle tree inside the contract *(which cost a lott of gass)*.  
 
-<!-- ## How it works
-### plausible deniability
-[EIP7503](https://eips.ethereum.org/EIPS/eip-7503) doesn't reveal if an user sends a private transfer. Instead it looks like a "normal" transfer.      
-In contrast to protocols like zcash, tornadocash, etc, where it's publicly "announced" when a user with public money protects their privacy.  
-In EIP7503, such actions look like normal transfers to fresh new wallets. Under the hood these wallets do not have a private key, so these funds are burned. The protocol then allows the user to "re-mint" these burned coins to an unlinked address, only if they can provide the zk-proof that no private key exist for the burn address.
-
-### gas cost  
-The gas cost of burning tokens is the same as a vanilla erc20 transfer. The equivalent is a deposit in ex tornado cash, which can cost up to 16x more.  
-This is because we reused the state tree as our merkle tree of commitments with storage proofs. Unlike in tornadocash and railgun where the contract builds it's own merkle tree.  
-
-### storage proofs
-The storage proofs are used as a private input to prove that an address with a balance *(a public input)* exist onchain.  
-The storage proofs are done on scroll which a zk-rollup. Which means its state trie uses zk friendly hash functions. Which makes it a lott faster to prove then Ethereums state trie!
-
-### burn address
-The burn address is a *private input*, generated by hashing a secret with the `poseidon` hash function and then striping of the last 12 bytes. This means that there is no private-public key pair of that hash since it calculated "wrong". But there is a secret which can be proven the user knows in a zk-circuit without revealing it!
-
-```js
-function hashBurnAddress(secret) {
-    const hash = ethers.toBeArray(poseidon1([secret])) 
-    const burnAddress = hash.slice(0,20)
-    return ethers.zeroPadValue(ethers.hexlify(burnAddress),20)
-}
-```
-*at line 152-157 in scripts/getProofInputs.js*  
-*https://github.com/jimjimvalkema/scrollZkWormholes/blob/main/scripts/getProofInputs.js#L152*
 
 
-### what's next
-The original EIP doesn't specify this but there are a number of features i like to add.  
-  
-**re-usable burn address + partial re-mints:** Might be possible by tracking `totalAmountReminted` inside the nullifier pre-image. Then also adding storage proof of the prev nullifier.  
-**full shielding txs:** Like in zcash and railgun, etc.  
-**improve proving time:** with proof recursion and a `historicStorageRoots` in a public mapping in the contract.   -->
+### scroll bugs
+this [address (0x3040f)](https://sepolia.scrollscan.com/token/0xe182977b23296ffdbbceead68dd76c3ea67f447f?a=0x3040f6436F0c4533587000EC5C36f5272Cc10Cd5) has 10 tokens but the storage proof from the scroll sepolia rpc returns a proof where it has 840 tokens
+0x3040f6436F0c4533587000EC5C36f5272Cc10Cd5
+
+This is most recent commit with that contract: https://github.com/jimjimvalkema/scrollZkWormholes/commit/e7d632651d07c1b6a328a0fde0d4296799f5d069
