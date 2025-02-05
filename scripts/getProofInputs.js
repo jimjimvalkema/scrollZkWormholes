@@ -15,7 +15,7 @@ const MAX_HASH_PATH_SIZE = 32;//248;//30; //this is the max tree depth in scroll
 const MAX_RLP_SIZE = 650//1000; //should be enough scroll mainnet wasn't going above 621, my guess is 673 bytes max + rlp over head. idk what overhead is tho.
 // TODO actually find out what the largest value could be 
 
-// TODO import real abi file instead
+// TODO import real abi file instead 
 const abi = [
     "function balanceOf(address) view returns (uint256)",
     "function partialNullifiers(bytes32) view returns (uint256)",
@@ -28,7 +28,6 @@ const abi = [
 // const __filename = fileURLToPath(import.meta.url);
 // const __dirname = path.dirname(__filename);
 // const abi = JSON.parse(await fs.readFile(__dirname + "/../ignition/deployments/chain-534351/artifacts/TokenModule#Token.json", "utf-8")).abi
-//TODO do actually math or better lib instead of just rerolling :p
 export function getSafeRandomNumber() {
     let isBigger = true
     let number = 0n
@@ -102,28 +101,29 @@ export function hashBurnAddress({secret}) {
 }
 
 // TODO find better name since it get prevSpendAmount and nonce
-export async function findLatestNonce({secret, tokenContract, startBlock}) {
+export async function findLatestNonce({secret, tokenContract, startBlock, noncesPerEventScan=20, chunkSizeEventScan=5000}) {
+    startBlock = Number(startBlock)
     //console.log(JSON.stringify(tokenContract))
-    let nonce = -1n // TODO clean up this while loop so nonce starts at 0n. (for readability)
-    let remintEvent = undefined;
+    let usedNonce = 0n // TODO clean up this while loop so nonce starts at 0n. (for readability)
+    let remintEvents = undefined;
     let prevSpendAmount = 0n 
     let txhashes = []
-    while (remintEvent !== false) {
-        nonce++;
-        const nullifierKey = hashNullifierKey({nonce, secret})
-        remintEvent = await getRemintEvent({nullifierKey, startBlock, contract:tokenContract})
-        if (remintEvent !== false) {
-            const remintedAmount = BigInt(remintEvent.data)
+    while (remintEvents !== false) {
+        const nullifierKeys = Array(noncesPerEventScan).fill(0).map((x,i)=>hashNullifierKey({nonce:usedNonce+BigInt(i), secret}))
+        remintEvents = await getRemintEventBulk({chunksize:chunkSizeEventScan,nullifierKeys, startBlock, contract:tokenContract})
+
+        if (remintEvents !== false) { //ugly
+            usedNonce += BigInt(remintEvents.length)
+            const remintedAmount = remintEvents.reduce((accum, event) => accum + BigInt(event.data),0n)
             prevSpendAmount += remintedAmount
-            startBlock = remintEvent.blockNumber
-            txhashes.push(remintEvent.transactionHash)
-            console.log({nullifierKey, nonce, prevSpendAmount, tx:remintEvent.transactionHash})
+            startBlock = remintEvents[remintEvents.length-1].blockNumber
+            txhashes = txhashes.concat(remintEvents.map((event)=>event.transactionHash))
         }
     }
-    return {nonce, prevSpendAmount, txhashes}
+    return {nonce: usedNonce, prevSpendAmount, txhashes}
 }
 
-//TODO do in bulk ex contract.filters.Remint([nullifierKey1, nullifierKey2, etc])
+
 async function getRemintEvent({nullifierKey, startBlock, contract}) {
     const filter =  contract.filters.Remint([nullifierKey])
     const events = await contract.queryFilter(filter,startBlock)
@@ -132,6 +132,39 @@ async function getRemintEvent({nullifierKey, startBlock, contract}) {
     } else {
         return false
     }
+}
+
+//TODO do in bulk ex contract.filters.Remint([nullifierKey1, nullifierKey2, etc])
+async function getRemintEventBulk({chunksize=5000,nullifierKeys, startBlock, contract}) {
+    const filter =  contract.filters.Remint([...nullifierKeys])
+    const events = await queryEventInChunks({chunksize,filter,startBlock,contract})
+    console.log({events})
+    if (events.length >= 1) {
+        return events 
+    } else {
+        return false
+    }
+} 
+/**
+ * 
+ * @param {{contract:ethers.Contract}} param0 
+ */
+async function queryEventInChunks({chunksize=5000,filter,startBlock,contract}){
+
+    const provider = contract.runner.provider
+    const lastBlock = await provider.getBlockNumber("latest")
+    const numIters = Math.ceil((lastBlock-startBlock)/chunksize)
+    const allEvents = []
+    console.log({lastBlock,startBlock,chunksize,numIters})
+    for (let index = 0; index < numIters; index++) {
+        const start = index*chunksize + startBlock
+        const stop =  (start + chunksize) > lastBlock ? lastBlock :  (start + chunksize)
+        console.log({filter,start,stop})
+        const events =  await contract.queryFilter(filter,start,stop)
+        allEvents.push(events)
+    }
+    return allEvents.flat()
+
 }
 
 

@@ -237,6 +237,7 @@ async function makeRemintUi({ secret, burnBalance, burnAddress, txHash, from, co
   const li = document.createElement("li")
 
   // @optimisation cache the latest nonce and prevSpend amount so we dont need a full resync on every page load and spend
+  console.log({secret, tokenContract:contract, startBlock: DEPLOYMENT_BLOCK})
   const { prevSpendAmount,txhashes } = await findLatestNonce({secret, tokenContract:contract, startBlock: DEPLOYMENT_BLOCK})
   console.log({txhashes})
 
