@@ -40,13 +40,13 @@ fn get_burn_address(secret: Field) -> [u8; 32] {
 
 // nonce makes sure the hash is never the same even when the amount is different
 // secret is so others cant try and find the pre-image (since this hash is posted onchain)
-fn hash_nullifier(amount: Field, nonce: Field, secret: Field) -> Field {
+fn hash_nullifier_value(amount: Field, nonce: Field, secret: Field) -> Field {
     poseidon::bn254::hash_3([amount, nonce, secret])
 }
 
 // nonce makes sure the hash is never the same even when the amount is different
 // secret is so others cant try and find the pre-image (since this hash is posted onchain)
-fn hash_nullifier_id(nonce: Field, secret: Field) -> Field {
+fn hash_nullifier_key(nonce: Field, secret: Field) -> Field {
     poseidon::bn254::hash_2([nonce, secret])
 }
 
@@ -54,19 +54,19 @@ fn lower_then_or_equal(a: Field, b: Field) -> bool {
     !std::field::bn254::gt(a, b)
 }
 
-//TODO check if its okay id prevNullifier id maps to a nullfier which is 0x000000000
+//TODO remane nullifierId -> nullifierKey and nullifier -> nullifierValue
 fn main(
     //----- public inputs
     remint_address: pub Field,// the address to re-mint to
     withdraw_amount: pub Field,
-    nullifier: pub Field,
-    nullifier_id: pub Field,
+    nullifier_value: pub Field,
+    nullifier_key: pub Field,
     storage_root: pub Field,
     //-----very privacy sensitive data -----
     secret: Field,//burnaddress is derived from secret // TODO instead of using a secrets use public cryptography shit so hardware wallets dont have to create a whole ass proof. Also makes complexity lower for hot wallets to ensure safety and better compatability with metamasksnap.
     burned_balance: [u8; 32], //TODO split into fields constraint golf or just as a field (also gas golf) (assumes a balance never > FIELD_LIMIT)
     nonce: Field, // nonce to create a nulliefier from to track encrypted spend_amounts
-    prev_nullifier_id: Field, // just here for the storage proof of prev_nullifier, since prev_nullifier already contains all info
+    prev_nullifier_key: Field, // just here for the storage proof of prev_nullifier, since prev_nullifier already contains all info
     prev_spend_amount: Field,
     burn_addr_storage_proof: Hash_path_proof<MAX_HASH_PATH_SIZE>,
     prev_nullifier_storage_proof: Hash_path_proof<MAX_HASH_PATH_SIZE>,
@@ -94,24 +94,24 @@ fn main(
     //--------prev nullifier------------
     if (nonce != 0) {
         // verify that the nullifier exist onchain with a storage proof
-        // cant do this outside the circuit since that links prev_nullifier_id with the nullifier_id
-        let prev_nullifier: [u8;32] = hash_nullifier(prev_spend_amount, nonce - 1, secret).to_be_bytes();
+        // cant do this outside the circuit since that links prev_nullifier_key with the nullifier_key
+        let prev_nullifier_value: [u8;32] = hash_nullifier_value(prev_spend_amount, nonce - 1, secret).to_be_bytes();
 
         // storage proof
-        let storage_node_key_prev_nullifier_id: Field = hash_node_key_from_mapping(
-            prev_nullifier_id.to_be_bytes(), 
+        let storage_node_key_prev_nullifier: Field = hash_node_key_from_mapping(
+            prev_nullifier_key.to_be_bytes(), 
             PARTIAL_NULLIFIERS_SLOT
         );
-        let storage_root_prev_nullifier_id = leaf_to_storage_root(
-            storage_node_key_prev_nullifier_id, 
-            prev_nullifier, 
+        let storage_root_prev_nullifier_key = leaf_to_storage_root(
+            storage_node_key_prev_nullifier, 
+            prev_nullifier_value, 
             prev_nullifier_storage_proof
         );
 
-        assert(storage_root_prev_nullifier_id == storage_root, "given storage_root doesnt match computed storage_root from the prev_nullifier storage proof");
+        assert(storage_root_prev_nullifier_key == storage_root, "given storage_root doesnt match computed storage_root from the prev_nullifier storage proof");
 
     } else {
-        // we dont need to check prev_nullifier_id since it doenst exist and we can keep prev_spend_amount at 0
+        // we dont need to check prev_nullifier_key since it doenst exist and we can keep prev_spend_amount at 0
         // TODO make the nullifier proof a recursive proof so the first tx is ~2x faster to proof
     }
 
@@ -122,14 +122,14 @@ fn main(
     // TODO this burns 1 wei because i cant do <=
     // should i just do new_spend_amount == new_spend_amount || secret < new_spend_amount
     assert(lower_then_or_equal(new_spend_amount, bytes32_to_field(burned_balance)), "withdraw_amount too large, new_spend_amount is larger than burned_balance");
-    let computed_nullifier: Field = hash_nullifier(new_spend_amount, nonce, secret);
+    let computed_nullifier_value: Field = hash_nullifier_value(new_spend_amount, nonce, secret);
     assert(
-        computed_nullifier == nullifier, "public input: nullifier, doesnt match the one computed in the circuit"
+        computed_nullifier_value == nullifier_value, "public input: nullifier_value, doesnt match the one computed in the circuit"
     );
 
-    // ----- nullifier_id -------------
-    let computed_nullifier_id = hash_nullifier_id(nonce, secret);
-    assert(computed_nullifier_id == nullifier_id, "computed nullifier doesnt match provided nullifier");
+    // ----- nullifier_key -------------
+    let computed_nullifier_key = hash_nullifier_key(nonce, secret);
+    assert(computed_nullifier_key == nullifier_key, "computed nullifier doesnt match provided nullifier");
 }
 
 #[test]
@@ -137,7 +137,7 @@ fn test_hashing() {
     let nonce = 0;
     let secret = 123;
     let address = get_burn_address(secret);
-    let nullifier = hash_nullifier_id(nonce, secret);
+    let nullifier = hash_nullifier_key(nonce, secret);
     println(address);
     println(nullifier);
 }
@@ -162,7 +162,7 @@ fn test_main() {
     let remint_address: Field = 0x93211e420c8F552a0e4836f84892a0D4eb5D6D54;
     let withdraw_amount:  Field = 0x8ac7230489e80000;
     let nullifier: Field = 0x212456bab521c4afa65cca2751d74f7cbac9ba747d7bc3c21be994b886a7bfe1;
-    let nullifier_id: Field = 0x0a2fdf0860adb5ea719794ecf7ec81cc57e56f1846e1508a7fa6448d36cd9624;
+    let nullifier_key: Field = 0x0a2fdf0860adb5ea719794ecf7ec81cc57e56f1846e1508a7fa6448d36cd9624;
     //let block_hash: [u8; 32] = [0x40,0x60,0xee,0xf3,0xb5,0xa5,0xf2,0x87,0x02,0x74,0xb0,0x30,0xe8,0xd8,0x3c,0x69,0xd2,0xf2,0x13,0xfe,0x4d,0x1b,0xd8,0x41,0xea,0x9b,0xe2,0x90,0x7f,0x79,0xc9,0x5d];
     let storage_root: Field = 0x1acea27e9cfb8fd7576d57d039f4c77e0d8edeb1d056bcc5213b7a65842cd900;
     
@@ -170,7 +170,7 @@ fn test_main() {
     let secret: Field  = 0x1cf2c2021c2e15a1c61547a32a6295078aacf089edb3cc66fd992f627f30f824;
     let burned_balance: [u8; 32]  = [0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x16,0xc4,0xab,0xbe,0xbe,0xa0,0x10,0x00,0x00];
     let nonce: Field = 3;
-    let prev_nullifier_id: Field = 0x1546f8d229c5a0943586cd5261ab4adbf995e849976a689a6055a32d4fae8337;
+    let prev_nullifier_key: Field = 0x1546f8d229c5a0943586cd5261ab4adbf995e849976a689a6055a32d4fae8337;
     let prev_spend_amount: Field = 30000000000000000000;
 
     let burn_addr_storage_proof =  Hash_path_proof {
@@ -193,13 +193,13 @@ fn test_main() {
         remint_address,
         withdraw_amount,
         nullifier,
-        nullifier_id,
+        nullifier_key,
         storage_root,
         //-----private inputs -----
         secret,
         burned_balance,
         nonce,
-        prev_nullifier_id,
+        prev_nullifier_key,
         prev_spend_amount,
         burn_addr_storage_proof,
         prev_nullifier_storage_proof,

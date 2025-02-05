@@ -19,8 +19,15 @@ const MAX_RLP_SIZE = 650//1000; //should be enough scroll mainnet wasn't going a
 const abi = [
     "function balanceOf(address) view returns (uint256)",
     "function partialNullifiers(bytes32) view returns (uint256)",
-    "function remintedAmounts(bytes32) view returns (uint256)"
+    "function remintedAmounts(bytes32) view returns (uint256)",
+    "event Remint(bytes32 indexed nullifierKey, uint256 amount)"
 ];
+//import fs from "fs/promises";
+// import path from 'path';
+// import { fileURLToPath } from 'url';
+// const __filename = fileURLToPath(import.meta.url);
+// const __dirname = path.dirname(__filename);
+// const abi = JSON.parse(await fs.readFile(__dirname + "/../ignition/deployments/chain-534351/artifacts/TokenModule#Token.json", "utf-8")).abi
 //TODO do actually math or better lib instead of just rerolling :p
 export function getSafeRandomNumber() {
     let isBigger = true
@@ -59,95 +66,6 @@ function asPaddedArray(value, len = 32, infront = true) {
 }
 
 /**
- * @param {*} BlockHash 
- * @param {*} remintAddress 
- * @param {*} secret 
- * @param {*} burnedTokenBalance 
- * @param {*} contractBalance 
- * @param {*} headerRlp 
- * @param {*} nonce_codesize_0 
- * @param {stateProof} hashPaths 
- * @returns 
- */
-export async function formatToTomlProver(proofData) {
-    //const headerRlp = await getBlockHeaderRlp(Number(block.number), provider)
-return `    
-block_hash = [${[...ethers.toBeArray(proofData. block.hash)].map((x)=>`"${x}"`)}]
-burned_balance =  [${asPaddedArray(burnedTokenBalance, 32).map((x)=>`"${x}"`)}]
-nonce = "${nonce}"
-nullifier = "${nullifier}"
-nullifier_id = "${nunullifierId}"
-prev_nullifier_id = "${prevNullifierId}"
-prev_spend_amount = "${prevSpendSmount}"
-remint_address = "${remintAddress}"
-secret = "${secret}"
-withdraw_amount = "${withdrawAmount}"
-
-[burn_addr_storage_proof.account_proof]
-hash_path = [${paddArray(hashPaths.accountProof.hashPath, maxHashPathLen, 0,false).map((x)=>`"${x}"`)}]
-hash_path_bools = 
-leaf_type = ""
-node_types = 
-real_hash_path_len = ""
-
-[burn_addr_storage_proof.storage_proof]
-hash_path = 
-hash_path_bools = 
-leaf_type = ""
-node_types = 
-real_hash_path_len = ""
-
-[contract_data]
-balance = ""
-header_rlp = 
-header_rlp_len = ""
-nonce_codesize_0 = ""
-
-[prev_nullifier_storage_proof.account_proof]
-hash_path = 
-hash_path_bools = 
-leaf_type = ""
-node_types = 
-real_hash_path_len = ""
-
-[prev_nullifier_storage_proof.storage_proof]
-hash_path = 
-hash_path_bools = 
-leaf_type = ""
-node_types = 
-real_hash_path_len = ""
-`
-}
-//     return `block_hash = [${[...ethers.toBeArray(block.hash)].map((x)=>`"${x}"`)}] 
-// nullifier = "${nullifier}"
-// remint_address = "${remintAddress}"
-// secret = "${secret}"
-// user_balance =  [${asPaddedArray(burnedTokenBalance, 32).map((x)=>`"${x}"`)}]
-
-// [storage_proof_data]
-// contract_balance = "${contractBalance}"
-// header_rlp =  [${[...ethers.toBeArray(ethers.zeroPadBytes(headerRlp,maxRlplen))].map((x)=>`"${x}"`)}]
-// header_rlp_len = "${ethers.toBeArray(headerRlp).length}"
-// nonce_codesize_0 = "${hashPaths.accountProof.leafNode.valuePreimage[0]}"
-
-// [storage_proof_data.hash_paths.account_proof]
-// hash_path = [${paddArray(hashPaths.accountProof.hashPath, maxHashPathLen, 0,false).map((x)=>`"${x}"`)}]
-// leaf_type = "${hashPaths.accountProof.leafNode.type}"
-// node_types = [${paddArray(hashPaths.accountProof.nodeTypes, maxHashPathLen, 0,false).map((x)=>`"${x}"`)}]
-// real_hash_path_len = "${hashPaths.accountProof.hashPath.length}"` 
-// +
-// `\nhash_path_bools = [${paddArray(hashPaths.accountProof.leafNode.hashPathBools.slice(0,hashPaths.accountProof.hashPath.length).reverse(), maxHashPathLen, 0,false).map((x)=>`"${Number(x)}"`)}]`
-// +
-// `\n
-// [storage_proof_data.hash_paths.storage_proof]
-// hash_path = [${paddArray(hashPaths.storageProof.hashPath, maxHashPathLen, 0,false).map((x)=>`"${x}"`)}]
-// leaf_type = "${hashPaths.storageProof.leafNode.type}"
-// node_types = [${paddArray(hashPaths.storageProof.nodeTypes, maxHashPathLen,  0,false).map((x)=>`"${x}"`)}]
-// real_hash_path_len = "${hashPaths.storageProof.hashPath.length}"`
-// +
-// `\nhash_path_bools =  [${paddArray(hashPaths.storageProof.leafNode.hashPathBools.slice(0,hashPaths.storageProof.hashPath.length).reverse(), maxHashPathLen, false,false).map((x)=>`"${Number(x)}"`)}]`
-// }
-/**
  * @typedef {import("../submodules/scrollZkStorageProofs/scripts/decodeScrollProof.js").decodedProof} decodedProof
  * @param {{
  *      contractAddress: ethers.AddressLike, 
@@ -167,14 +85,14 @@ export async function getStateProofOfMapping({contractAddress, key, keyType, slo
     
 }
 
-export function hashNullifier({amount,nonce,secret}) {
-    const nullifier = poseidon3([amount,nonce,secret])
-    return ethers.zeroPadValue(ethers.toBeHex(nullifier),32)
+export function hashNullifierValue({amount,nonce,secret}) {
+    const nullifierValue = poseidon3([amount,nonce,secret])
+    return ethers.zeroPadValue(ethers.toBeHex(nullifierValue),32)
 }
 
-export function hashNullifierId({nonce,secret}) {
-    const nullifierId = poseidon2([nonce,secret])
-    return ethers.zeroPadValue(ethers.toBeHex(nullifierId),32)
+export function hashNullifierKey({nonce,secret}) {
+    const nullifierKey = poseidon2([nonce,secret])
+    return ethers.zeroPadValue(ethers.toBeHex(nullifierKey),32)
 }
 
 export function hashBurnAddress({secret}) {
@@ -184,21 +102,38 @@ export function hashBurnAddress({secret}) {
 }
 
 // TODO find better name since it get prevSpendAmount and nonce
-export async function findLatestNonce({secret, tokenContract}) {
+export async function findLatestNonce({secret, tokenContract, startBlock}) {
     //console.log(JSON.stringify(tokenContract))
     let nonce = -1n // TODO clean up this while loop so nonce starts at 0n. (for readability)
-    let nullifier = undefined;
+    let remintEvent = undefined;
     let prevSpendAmount = 0n 
-    while (nullifier !== "0x00") {
+    let txhashes = []
+    while (remintEvent !== false) {
         nonce++;
-        const nullifierId = hashNullifierId({nonce, secret})
-        const remintedAmount = await tokenContract.remintedAmounts(nullifierId)
-        prevSpendAmount += remintedAmount
-        nullifier = ethers.toBeHex(await tokenContract.partialNullifiers(nullifierId))
-        console.log({nullifier, nonce, prevSpendAmount})
+        const nullifierKey = hashNullifierKey({nonce, secret})
+        remintEvent = await getRemintEvent({nullifierKey, startBlock, contract:tokenContract})
+        if (remintEvent !== false) {
+            const remintedAmount = BigInt(remintEvent.data)
+            prevSpendAmount += remintedAmount
+            startBlock = remintEvent.blockNumber
+            txhashes.push(remintEvent.transactionHash)
+            console.log({nullifierKey, nonce, prevSpendAmount, tx:remintEvent.transactionHash})
+        }
     }
-    return {nonce, prevSpendAmount}
+    return {nonce, prevSpendAmount, txhashes}
 }
+
+//TODO do in bulk ex contract.filters.Remint([nullifierKey1, nullifierKey2, etc])
+async function getRemintEvent({nullifierKey, startBlock, contract}) {
+    const filter =  contract.filters.Remint([nullifierKey])
+    const events = await contract.queryFilter(filter,startBlock)
+    if (events[0] !== undefined) {
+        return events[0] 
+    } else {
+        return false
+    }
+}
+
 
 /**
  * @param {{
@@ -222,9 +157,9 @@ export async function findLatestNonce({secret, tokenContract}) {
  *          prevSpendAmount: BigInt,
  *      },
  *      nullifierData : {
- *          nullifier: ethers.BytesLike, 
- *          nullifierId: ethers.BytesLike,
- *          prevNullifierId: ethers.BytesLike, 
+ *          nullifierValue: ethers.BytesLike, 
+ *          nullifierKey: ethers.BytesLike,
+ *          prevNullifierKey: ethers.BytesLike, 
  *          nonce: BigInt,
  *      },
  *      stateProofData : {
@@ -238,23 +173,23 @@ export async function findLatestNonce({secret, tokenContract}) {
  *   }} RemintProofData 
  * @returns {Promise<RemintProofData>} remintProofData
  */
-export async function getRemintProofData({contractAddress, burnAddress,withdrawAmount, blockNumber,secret, provider = provider}) {
+export async function getRemintProofData({contractAddress, burnAddress,withdrawAmount, blockNumber,deploymentBlock,secret, provider = provider}) {
     // contract data
     const tokenContract = new ethers.Contract(contractAddress, abi, provider)
     const burnedTokenBalance = await tokenContract.balanceOf(burnAddress)
-    const {nonce, prevSpendAmount} = await findLatestNonce({secret, tokenContract})
+    const {nonce, prevSpendAmount} = await findLatestNonce({secret, tokenContract, startBlock:deploymentBlock})
 
     // nullifiers
-    const nullifier = hashNullifier({amount: prevSpendAmount + withdrawAmount,nonce,secret})
-    const nullifierId = hashNullifierId({nonce,secret})
-    const prevNullifierId = hashNullifierId({nonce: nonce-1n,secret})
+    const nullifierValue = hashNullifierValue({amount: prevSpendAmount + withdrawAmount,nonce,secret})
+    const nullifierKey = hashNullifierKey({nonce,secret})
+    const prevNullifierKey = hashNullifierKey({nonce: nonce-1n,secret})
 
     
     // storage proofs
     console.log("getting balance merkle proof")
     const balancesStateProof = await getStateProofOfMapping({contractAddress, key:burnAddress, keyType:"address", slot:BALANCES_SLOT,blockNumber, provider})
     console.log("getting nullifier merkle proof")
-    const prevNullifierStateProof = await getStateProofOfMapping({contractAddress, key:prevNullifierId, keyType:"bytes32", slot:NULLIFIERS_SLOT,blockNumber, provider})
+    const prevNullifierStateProof = await getStateProofOfMapping({contractAddress, key:prevNullifierKey, keyType:"bytes32", slot:NULLIFIERS_SLOT,blockNumber, provider})
     
     const block = await provider.getBlock(blockNumber)
     const {rlp, byteNibbleOffsets} = await getBlockHeaderProof({blockNumber:Number(blockNumber), provider})
@@ -271,9 +206,9 @@ export async function getRemintProofData({contractAddress, burnAddress,withdrawA
         },
 
         nullifierData : {
-            nullifier, 
-            nullifierId,
-            prevNullifierId, 
+            nullifierValue: nullifierValue, 
+            nullifierKey: nullifierKey,
+            prevNullifierKey: prevNullifierKey, 
             nonce,
         },
 
@@ -318,13 +253,13 @@ function Bytes(input, len) {
  * @typedef {{
  *      remint_address: ethers.AddressLike,
  *          withdraw_amount: ethers.BytesLike,
- *          nullifier: ethers.BytesLike,
- *          nullifier_id: ethers.BytesLike,
+ *          nullifier_value: ethers.BytesLike,
+ *          nullifier_key: ethers.BytesLike,
  *          storage_root: ethers.BytesLike,
  *          secret: ethers.BytesLike,
  *          burned_balance: number[],
  *          nonce: ethers.BytesLike,
- *          prev_nullifier_id: ethers.BytesLike,
+ *          prev_nullifier_key: ethers.BytesLike,
  *          prev_spend_amount: ethers.BytesLike,
  *          burn_addr_storage_proof: {
  *              hash_path: ethers.BytesLike[],
@@ -351,11 +286,11 @@ function Bytes(input, len) {
  *    }} ProofInputs
  * @returns {Promise<ProofInputs>} ProofInputs
  */
-export async function getProofInputs({contractAddress, blockNumber,withdrawAmount,remintAddress, secret, provider, maxHashPathLen=MAX_HASH_PATH_SIZE, maxRlplen=MAX_RLP_SIZE}) {
+export async function getProofInputs({contractAddress, blockNumber,withdrawAmount,remintAddress, secret, provider,deploymentBlock, maxHashPathLen=MAX_HASH_PATH_SIZE, maxRlplen=MAX_RLP_SIZE}) {
  
     
     const burnAddress = hashBurnAddress({secret})
-    const proofData = await getRemintProofData({contractAddress,burnAddress, withdrawAmount,blockNumber:Number(blockNumber),secret, provider})
+    const proofData = await getRemintProofData({contractAddress,burnAddress, withdrawAmount,blockNumber:Number(blockNumber),deploymentBlock,secret, provider})
     const storageRoot = proofData.stateProofData.balancesStateProof.accountProof.accountPreimage.storageRoot
     const {   
         // nullifiers
@@ -366,9 +301,9 @@ export async function getProofInputs({contractAddress, blockNumber,withdrawAmoun
         },
         
         nullifierData : {
-            nullifier, 
-            nullifierId,
-            prevNullifierId, 
+            nullifierValue, 
+            nullifierKey,
+            prevNullifierKey, 
             nonce,
         },
 
@@ -399,8 +334,8 @@ export async function getProofInputs({contractAddress, blockNumber,withdrawAmoun
             // --public inputs--
             remint_address: remintAddress,
             withdraw_amount: ethers.toBeHex(withdrawAmount), //asPaddedArray(withdrawAmount, 32).map((x) => ethers.toBeHex(x)),
-            nullifier: nullifier,
-            nullifier_id: nullifierId,
+            nullifier_value: nullifierValue,
+            nullifier_key: nullifierKey,
             //block_hash: [...ethers.toBeArray(block.hash)].map((x) => ethers.toBeHex(x)),
             storage_root: storageRoot,
             //--------------------
@@ -410,7 +345,7 @@ export async function getProofInputs({contractAddress, blockNumber,withdrawAmoun
             secret: ethers.toBeHex(secret),
             burned_balance: asPaddedArray(burnedTokenBalance, 32).map((x) => ethers.toBeHex(x)),
             nonce: ethers.toBeHex(nonce),
-            prev_nullifier_id: ethers.toBeHex(prevNullifierId),
+            prev_nullifier_key: ethers.toBeHex(prevNullifierKey),
             prev_spend_amount: ethers.toBeHex(prevSpendAmount),
 
             // storage proofs
@@ -452,15 +387,15 @@ fn test_main() {
     //----- public inputs
     let remint_address: Field = ${remintAddress};
     let withdraw_amount:  Field = ${ethers.toBeHex(withdrawAmount)};
-    let nullifier: Field = ${proofData.nullifierData.nullifier};
-    let nullifier_id: Field = ${proofData.nullifierData.nullifierId};
+    let nullifier_value: Field = ${proofData.nullifierData.nullifierValue};
+    let nullifier_key: Field = ${proofData.nullifierData.nullifierKey};
     let block_hash: [u8; 32] = [${paddArray([...ethers.toBeArray(proofData.stateProofData.block.hash)],32,0,true).map((x)=>ethers.toBeHex(x))}];
     
     //-----private inputs -----
     let secret: Field  = ${ethers.toBeHex(secret)};
     let burned_balance: [u8; 32]  = [${paddArray([...ethers.toBeArray(proofData.amounts.burnedTokenBalance)],32,0,true).map((x)=>ethers.toBeHex(x))}];
     let nonce: Field = ${proofData.nullifierData.nonce};
-    let prev_nullifier_id: Field = ${proofData.nullifierData.prevNullifierId};
+    let prev_nullifier_key: Field = ${proofData.nullifierData.prevNullifierKey};
     let prev_spend_amount: Field = ${proofData.amounts.prevSpendAmount};
 
     let burn_addr_storage_proof = Hash_paths_state_proof {
@@ -506,122 +441,17 @@ fn test_main() {
         //----- public inputs
         remint_address,
         withdraw_amount,
-        nullifier,
-        nullifier_id,
+        nullifier_value,
+        nullifier_key,
         block_hash,
         //-----private inputs -----
         secret,
         burned_balance,
         nonce,
-        prev_nullifier_id,
+        prev_nullifier_key,
         prev_spend_amount,
         burn_addr_storage_proof,
         prev_nullifier_storage_proof,
         contract_data,
-    );
+    );`
 }
-`
-    return`
-#[test]
-fn test_main() {
-    let storage_proof_data = Storage_proof_data {
-        hash_paths :Hash_paths_state_proof{
-                account_proof: Hash_path_proof {
-                hash_path:  [${paddArray(hashPaths.accountProof.hashPath, maxHashPathLen, 0,false)}],
-                leaf_type: ${hashPaths.accountProof.leafNode.type},
-                node_types: [${paddArray(hashPaths.accountProof.nodeTypes, maxHashPathLen, 0,false)}],
-                real_hash_path_len: ${hashPaths.accountProof.hashPath.length},`
-                +
-                `
-                hash_path_bools: [${paddArray(hashPaths.accountProof.leafNode.hashPathBools.slice(0,hashPaths.accountProof.hashPath.length).reverse(), maxHashPathLen, false,false).map((x)=>`${x}`)}]`
-                +
-                `
-            },
-            storage_proof: Hash_path_proof {
-                hash_path: [${paddArray(hashPaths.storageProof.hashPath, maxHashPathLen, 0,false)}],
-                leaf_type: ${hashPaths.storageProof.leafNode.type},
-                node_types: [${paddArray(hashPaths.storageProof.nodeTypes, maxHashPathLen,  0,false)}],
-                real_hash_path_len: ${hashPaths.storageProof.hashPath.length},`
-                +
-                `
-                hash_path_bools: [${paddArray(hashPaths.storageProof.leafNode.hashPathBools.slice(0,hashPaths.storageProof.hashPath.length).reverse(), maxHashPathLen, false,false).map((x)=>`${x}`)}]`
-                +
-                `
-            },
-        },
-            contract_balance: ${contractBalance},
-            header_rlp:[${[...ethers.toBeArray(ethers.zeroPadBytes(headerRlp,maxRlplen))]}],
-            header_rlp_len:${ethers.toBeArray(headerRlp).length},
-            nonce_codesize_0:${hashPaths.accountProof.leafNode.valuePreimage[0]},
-        };
-
-
-    let secret = ${secret};
-
-    let remint_address = ${remintAddress};
-    let user_balance = [${asPaddedArray(burnedTokenBalance, 32)}];
-    let block_hash =  [${[...ethers.toBeArray(block.hash)]}];
-    let nullifier = hash_nullifier(secret);
-    main(remint_address,user_balance,block_hash,nullifier,secret,storage_proof_data);
-}`
-}
-
-async function setDefaults(args) {
-    const defaults = {
-        contract: "0xe175E40d10963BD703722034E53F838D74014BE1",
-        recipient: "0x93211e420c8F552a0e4836f84892a0D4eb5D6D54",
-        secret: 123,
-        rpc:  "https://sepolia-rpc.scroll.io/",
-        blocknumber: "latest", 
-        maxTreeDepth: MAX_HASH_PATH_SIZE, 
-        maxRlplen: MAX_RLP_SIZE
-    }
-    for (const defaultParam in defaults) {
-        if (args[defaultParam] === undefined) {
-            console.log(`"--${defaultParam}=" not set defaulting to: "${defaults[defaultParam]}"`)
-            args[defaultParam] = defaults[defaultParam]
-        }
-    }
-    return args
-}
-
-async function main() {
-    let args = argParser(process.argv)
-    if (Object.keys(args).length) {
-        args = await setDefaults(args)
-        const contractAddress = args["contract"]
-        const remintAddress = args["recipient"]
-        const secret = args["secret"]
-        const providerUrl = args["rpc"]
-        const maxHashPathLen = args["maxTreeDepth"]
-        const maxRlplen = args["maxRlplen"]
-        const provider = new ethers.JsonRpcProvider(providerUrl) 
-        const blockNumber =  await provider.getBlockNumber(args["blocknumber"])
-        const proofInputs = await getProofInputs(contractAddress,blockNumber,remintAddress,secret,provider,maxHashPathLen, maxRlplen)
-        
-        // TODO put this in the proper files instead
-        console.log("------proofInputs json----------------------------------")
-        console.log({proofInputs})
-        console.log("--------------------------------------------------------\n")
-        console.log("------test main.nr--------------------------------------")
-        console.log(formatTest({proofData, remintAddress, withdrawAmount, secret}))
-        console.log("--------------------------------------------------------\n")
-        console.log("------Prover.toml---------------------------------------")
-        console.log(formatToTomlProver(
-            proofInputs.blockData.block, 
-            proofInputs.blockData.headerRlp, 
-            remintAddress, 
-            secret,
-            proofInputs.proofData.burnedTokenBalance, 
-            proofInputs.proofData.contractBalance , 
-            proofInputs.proofData.hashPaths,
-            maxHashPathLen,
-            maxRlplen,
-            proofInputs.noirJsInputs.nullifier
-        ).toString())
-        console.log("--------------------------------------------------------\n")
-    }
-
-}
-
-//main()

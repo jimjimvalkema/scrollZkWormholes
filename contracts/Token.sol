@@ -17,19 +17,13 @@ interface IVerifier {
 }
 
 error VerificationFailed();
-event Remint(bytes32 nullifierId, uint256 amount);
+event Remint(bytes32 indexed nullifierKey, uint256 amount);
 event StorageRootAdded(uint256 blockNumber);
 
 contract Token is ERC20, Ownable {
-    // @notice nullifierId = poseidon(nonce, secret)
-    // @notice nullifier = poseidon(amountSpent, secret)
-    mapping (bytes32 => bytes32) public partialNullifiers; // nullifierId -> nullifier 
-    
-    // TODO figure out a better way to store this. 
-    // solutions: 
-    // Storing it in partialNullifiers next to the nullifier in a bytes32[1] array is better gas but also doable but requires work on the storage proof 
-    // Emiting a log with nullifierId is best gas wise but requires event scanning. (prob do this)
-    mapping (bytes32 => uint256) public remintedAmounts; // nullifierId -> amountReminted 
+    // @notice nullifierKey = poseidon(nonce, secret)
+    // @notice nullifierValue = poseidon(amountSpent, nonce, secret)
+    mapping (bytes32 => bytes32) public partialNullifiers; // nullifierKey -> nullifierValue 
 
     // remintVerifier doesnt go down the full 248 depth (32 instead) of the tree but is able to run witn noir js (and is faster)
     address public remintVerifier;
@@ -78,8 +72,8 @@ contract Token is ERC20, Ownable {
     }
 
     //---------------public---------------------
-    function reMint(address to, uint256 amount, uint256 blockNum, bytes32 nullifierId, bytes32 nullifier, bytes calldata snarkProof) public {
-        _reMint( to,  amount,  blockNum, nullifierId, nullifier, snarkProof,  remintVerifier);
+    function reMint(address to, uint256 amount, uint256 blockNum, bytes32 nullifierKey, bytes32 nullifierValue, bytes calldata snarkProof) public {
+        _reMint( to,  amount,  blockNum, nullifierKey, nullifierValue, snarkProof,  remintVerifier);
     }
 
     // verifier wants the [u8;32] (bytes32 array) as bytes32[32] array.
@@ -90,15 +84,15 @@ contract Token is ERC20, Ownable {
     //TODO make private
     // TODO see much gas this cost and if publicInputs can be calldata
     // does bit shifting instead of indexing save gas?
-    function _formatPublicRemintInputs(address to, uint256 amount, bytes32 storageRoot, bytes32 nullifierId, bytes32 nullifier) public pure returns (bytes32[] memory) {
+    function _formatPublicRemintInputs(address to, uint256 amount, bytes32 storageRoot, bytes32 nullifierKey, bytes32 nullifierValue) public pure returns (bytes32[] memory) {
         bytes32 amountBytes = bytes32(uint256(amount));
         bytes32 toBytes = bytes32(uint256(uint160(bytes20(to))));
         bytes32[] memory publicInputs = new bytes32[](5);
 
         publicInputs[0] = toBytes;
         publicInputs[1] = amountBytes;
-        publicInputs[2] = nullifier;
-        publicInputs[3] = nullifierId;
+        publicInputs[2] = nullifierValue;
+        publicInputs[3] = nullifierKey;
         publicInputs[4] = storageRoot;
 
         return publicInputs;
@@ -120,16 +114,16 @@ contract Token is ERC20, Ownable {
         return publicInputs;
     }
 
-    function _reMint(address to, uint256 amount, uint256 blockNum, bytes32 nullifierId, bytes32 nullifier, bytes calldata snarkProof, address _verifier) private {
+    function _reMint(address to, uint256 amount, uint256 blockNum, bytes32 nullifierKey, bytes32 nullifierValue, bytes calldata snarkProof, address _verifier) private {
         //require(nullifiers[nullifier] == false, "burn address already used");
-        require(partialNullifiers[nullifierId] == bytes32(0x0), "nullifier already exist");
-        partialNullifiers[nullifierId] = nullifier;
+        require(partialNullifiers[nullifierKey] == bytes32(0x0), "nullifier already exist");
+        partialNullifiers[nullifierKey] = nullifierValue;
 
         // @workaround
         //blockhash() is fucking use less :,(
         //bytes32 blkhash = blockhash(blockNum);
         bytes32 storageRoot = storageRoots[blockNum];
-        bytes32[] memory publicInputs = _formatPublicRemintInputs(to, amount, storageRoot, nullifierId, nullifier);
+        bytes32[] memory publicInputs = _formatPublicRemintInputs(to, amount, storageRoot, nullifierKey, nullifierValue);
         if (!IVerifier(_verifier).verify(snarkProof, publicInputs)) {
             revert VerificationFailed();
         }
@@ -138,7 +132,6 @@ contract Token is ERC20, Ownable {
             _balances[to] += amount;
         }
         emit Transfer(address(0), to, amount);
-        emit Remint(nullifierId, amount);
-        remintedAmounts[nullifierId] = amount;
+        emit Remint(nullifierKey, amount);
     }
 }

@@ -23,7 +23,7 @@ import { poseidon1, poseidon2 } from "poseidon-lite";
 import os from 'os';
 
 // project imports
-import { formatTest, getProofInputs, formatToTomlProver,getSafeRandomNumber,hashBurnAddress, paddArray } from "./getProofInputs.js"
+import { getProofInputs,getSafeRandomNumber,hashBurnAddress, paddArray } from "./getProofInputs.js"
 import remintProverCircuit from '../circuits/remintProver/target/remintProver.json'  with { type: "json" }; //assert {type: 'json'};
 import storageRootProverCircuit from '../circuits/storageRootProver/target/storageRootProver.json'  with { type: "json" }; //assert {type: 'json'};
 
@@ -69,7 +69,7 @@ async function burn({ secret, amount, contract }) {
  *      contractDeployerWallet: ethers.Contract 
  * }} param0 
  * @typedef {import("@noir-lang/types").ProofData} ProofData
- * @returns {ProofData} proof
+ * @returns {Promise<ProofData>} proof
  */
 async function createRemintProof({ noirjsInputs, circuit = remintProverCircuit, contractDeployerWallet }) {
     // const backend = new BarretenbergBackend(circuit);
@@ -116,9 +116,9 @@ async function setTrustedStorageRoot({ storageRoot, blockNumber, contract }) {
     return setBlockHashTx
 }
 
-async function remint({ to, amount, blockNumber,nullifierId, nullifier, snarkProof, contract }) {
+async function remint({ to, amount, blockNumber,nullifierKey,nullifierValue, snarkProof, contract }) {
     // verify on chain and reMint!
-    const remintTx = await contract.reMint(to, amount, blockNumber,nullifierId,nullifier, snarkProof)
+    const remintTx = await contract.reMint(to, amount, blockNumber,nullifierKey,nullifierValue, snarkProof)
     return remintTx
 }
 
@@ -210,7 +210,8 @@ async function verifyStorageRootOffchain({proofData, tokenContract,storageRootPr
 }
 
 async function main() {
-    const CONTRACT_ADDRESS = "0x136F696481b7d48e6BcffE01a29c67080783A1ff"
+    const CONTRACT_ADDRESS = "0x6563cfc28f56b112Db0e8d6BF420590E92631368"
+    const DEPLOYMENT_BLOCK = 8109507n
     // --------------
 
     // --------------provider---------------
@@ -256,6 +257,7 @@ async function main() {
         remintAddress: recipientWallet.address, 
         secret: secret, 
         provider: provider, 
+        deploymentBlock: DEPLOYMENT_BLOCK,
         maxHashPathSize: MAX_HASH_PATH_SIZE, 
         maxRlpSize: MAX_RLP_SIZE
     })
@@ -296,8 +298,8 @@ async function main() {
         to: RECIPIENT_ADDRESS,
         amount: remintAmount,
         blockNumber, //blockNumber: BigInt(proofInputs.blockData.block.number),
-        nullifierId: proofInputs.proofData.nullifierData.nullifierId,
-        nullifier: proofInputs.proofData.nullifierData.nullifier,
+        nullifierKey: proofInputs.proofData.nullifierData.nullifierKey,
+        nullifierValue: proofInputs.proofData.nullifierData.nullifierValue,
         snarkProof: ethers.hexlify(proof.proof),
     }
     

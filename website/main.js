@@ -8,7 +8,7 @@ import { Noir } from '@noir-lang/noir_js';
 
 
 import { abi as contractAbi } from "./abis/Token.json"//'../artifacts/contracts/Token.sol/Token.json'
-import { getSafeRandomNumber, getProofInputs, hashNullifier, hashBurnAddress, findLatestNonce } from '../scripts/getProofInputs'
+import { getSafeRandomNumber, getProofInputs, hashNullifierValue,hashNullifierKey, hashBurnAddress, findLatestNonce } from '../scripts/getProofInputs'
 messageUi("initializing prover 🤖")
 // messageUi(`<br>\ndebug SharedArrayBuffer: ${typeof SharedArrayBuffer}`, true)
 complainAboutSharedBufferArray()
@@ -17,9 +17,9 @@ const backendInitPromise = backend.instantiate().then(() => { messageUi("") })
 const noir = new Noir(circuit, backend)
 
 
-
-
-const CONTRACT_ADDRESS = "0x136f696481b7d48e6bcffe01a29c67080783a1ff"//"0xE182977B23296FFdBbcEeAd68dd76c3ea67f447F"
+//TODO remane nullifierId -> nullifierKey and nullifier -> nullifierValue
+const DEPLOYMENT_BLOCK = 8109507n
+const CONTRACT_ADDRESS = "0x6563cfc28f56b112Db0e8d6BF420590E92631368"//"0xE182977B23296FFdBbcEeAd68dd76c3ea67f447F"
 const FIELD_LIMIT = 21888242871839275222246405745257275088548364400416034343698204186575808495617n //using poseidon so we work with 254 bits instead of 256
 const MAX_HASH_PATH_SIZE = 32;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
 const MAX_RLP_SIZE = 650
@@ -46,8 +46,7 @@ async function remintBtnHandler({ signerAddress, contract, secret, signer, remin
   
 
     const blockNumber = BigInt(await provider.getBlockNumber("latest"))
-    console.log(remintAmountEl.value, prevSpendAmount)
-    console.log({contract: contract.target, blockNumber, amount, to, secret, provider, MAX_HASH_PATH_SIZE, MAX_RLP_SIZE})
+    console.log({DEPLOYMENT_BLOCK})
     const proofInputs = await getProofInputs({
       contractAddress:contract.target,
       blockNumber,
@@ -55,6 +54,7 @@ async function remintBtnHandler({ signerAddress, contract, secret, signer, remin
       remintAddress:to, 
       secret:secret, 
       provider:provider, 
+      deploymentBlock: DEPLOYMENT_BLOCK,
       maxHashPathSize:MAX_HASH_PATH_SIZE, 
       maxRlpSize:MAX_RLP_SIZE
     })
@@ -67,15 +67,14 @@ async function remintBtnHandler({ signerAddress, contract, secret, signer, remin
     const proof = createSnarkProof({ proofInputsNoirJs: proofInputs.noirJsInputs, circuit: circuit })
     putTxInUi(await setTrustedStorageRootTx)
     await proofTimeInfo()
-    console.log({ proof })
     //console.log({proof})
     // TODO make this object in a new function in getProofInputs.js
     const remintInputs = {
       to,
       amount,
       blockNumber, //blockNumber: BigInt(proofInputs.blockData.block.number),
-      nullifierId: proofInputs.proofData.nullifierData.nullifierId,
-      nullifier: proofInputs.proofData.nullifierData.nullifier,
+      nullifierKey: proofInputs.proofData.nullifierData.nullifierKey,
+      nullifierValue: proofInputs.proofData.nullifierData.nullifierValue,
       snarkProof: ethers.hexlify((await proof).proof),
 
     }
@@ -87,7 +86,7 @@ async function remintBtnHandler({ signerAddress, contract, secret, signer, remin
     await new Promise(resolve => setTimeout(resolve, 500))
 
     // TODO make wrapped function inside getProofInputs that consumes the remintInputs
-    const remintTx = await contract.reMint(remintInputs.to, remintInputs.amount, remintInputs.blockNumber, remintInputs.nullifierId, remintInputs.nullifier, remintInputs.snarkProof)
+    const remintTx = await contract.reMint(remintInputs.to, remintInputs.amount, remintInputs.blockNumber, remintInputs.nullifierKey, remintInputs.nullifierValue, remintInputs.snarkProof)
 
 
     await putTxInUi(await remintTx)
@@ -238,15 +237,9 @@ async function makeRemintUi({ secret, burnBalance, burnAddress, txHash, from, co
   const li = document.createElement("li")
 
   // @optimisation cache the latest nonce and prevSpend amount so we dont need a full resync on every page load and spend
-  const { prevSpendAmount } = await findLatestNonce({secret, tokenContract:contract})
+  const { prevSpendAmount,txhashes } = await findLatestNonce({secret, tokenContract:contract, startBlock: DEPLOYMENT_BLOCK})
+  console.log({txhashes})
 
-  //button
-  //const nullifier = hashNullifier(secret)
-  // TODO show remaining balance
-  //const isNullified = await contract.nullifiers(nullifier)
-  console.log({ secret, burnAddress })//, nullifier,isNullified})
-
-  const isNullified = false // TODO remove this
   if (burnBalance === prevSpendAmount) {
     li.append(
       br(),
@@ -307,13 +300,24 @@ async function makeRemintUi({ secret, burnBalance, burnAddress, txHash, from, co
     // br(),
     `amount burned: ${ethers.formatUnits(burnBalance, decimals)},`,
     br(),
-    `amount spent: ${ethers.formatUnits(prevSpendAmount, 18)}`
+    `amount spent: ${ethers.formatUnits(prevSpendAmount, 18)}`,
+    br(),
+    br(),
   )
-  if (txHash) {
-    const txHashEl = document.createElement("a")
-    txHashEl.innerText = `${txHash}`
-    txHashEl.href = `${explorer}/tx/${txHash}`
-    li.append(br(), `tx: `, txHashEl)
+  if (txhashes.length) {
+    const txUl = document.createElement("Ul")
+    const txLuLabel = document.createElement("label")
+    txLuLabel.innerText = "spent transactions: "
+
+    for (const tx of txhashes) {
+      const txHashEl = document.createElement("a")
+      txHashEl.innerText = `${tx}`
+      txHashEl.href = `${explorer}/tx/${tx}`
+      txUl.append(br(), `tx: `, txHashEl)
+      
+    }
+    txLuLabel.append(txUl)
+    li.append(txLuLabel)
   }
   return li
 }
@@ -384,12 +388,10 @@ async function createSnarkProof({ proofInputsNoirJs, circuit = circuit }) {
 async function burnBtnHandler({ contract, decimals, signer }) {
   return await dumpErrorsInUi(async () => {
     const amountUnparsed = document.getElementById("burnAmount").value
-    console.log({ amountUnparsed })
     const amount = ethers.parseUnits(amountUnparsed, decimals)
 
     const secret = getSafeRandomNumber()
     const burnAddressInput = document.getElementById("burnAddressInput")
-    console.log({ burnAddressInputvalue: burnAddressInput.value })
     const burnAddress = burnAddressInput.value === "" ? hashBurnAddress({secret}) : ethers.getAddress(burnAddressInput.value);
     const from = signer.address
     console.log({ secret, burnAddress, from, txHash: null })
@@ -420,6 +422,8 @@ async function main() {
   //--------------------------
   window.contract = contract
   window.signer = signer
+  window.hashNullifierValue = hashNullifierValue
+  window.hashNullifierKey = hashNullifierKey
 
   const walletLatestBlock = ethers.toBigInt((await provider.getBlock("latest")).number)
   const etherscanLatestBlock = ethers.toBigInt((await (await fetch(`https://api-sepolia.scrollscan.com/api?module=proxy&action=eth_blockNumber&apikey=YGETYAVVAW8V4JY9T92C3BFMFHG53HRPMH`)).json()).result)
