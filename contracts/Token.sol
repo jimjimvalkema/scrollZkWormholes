@@ -24,6 +24,7 @@ contract Token is ERC20, Ownable {
     // @notice nullifierKey = poseidon(nonce, secret)
     // @notice nullifierValue = poseidon(amountSpent, nonce, secret)
     mapping (bytes32 => bytes32) public partialNullifiers; // nullifierKey -> nullifierValue 
+    mapping (bytes32 => uint256) public reMintAmounts; 
 
     // remintVerifier doesnt go down the full 248 depth (32 instead) of the tree but is able to run witn noir js (and is faster)
     address public remintVerifier;
@@ -133,5 +134,6 @@ contract Token is ERC20, Ownable {
         }
         emit Transfer(address(0), to, amount);
         emit Remint(nullifierKey, amount);
+        reMintAmounts[nullifierKey] = amount; // we can do without this to save gas but i am too lazy for event scanning 
     }
 }

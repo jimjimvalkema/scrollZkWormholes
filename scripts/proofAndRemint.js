@@ -210,8 +210,7 @@ async function verifyStorageRootOffchain({proofData, tokenContract,storageRootPr
 }
 
 async function main() {
-    const CONTRACT_ADDRESS = "0x6563cfc28f56b112Db0e8d6BF420590E92631368"
-    const DEPLOYMENT_BLOCK = 8109507n
+    const CONTRACT_ADDRESS = "0x6A0e54612253d97Fd2c3dbb73BDdBAFfca531A9B"
     // --------------
 
     // --------------provider---------------
@@ -240,12 +239,12 @@ async function main() {
     const burnAddress = hashBurnAddress({secret})
 
     //mint
-    // const mintTx = await mint({ to: deployerWallet.address, amount: burnAmount, contract: contractDeployerWallet })
-    // console.log({ mintTx: (await mintTx.wait(1)).hash })
+    const mintTx = await mint({ to: deployerWallet.address, amount: burnAmount, contract: contractDeployerWallet })
+    console.log({ mintTx: (await mintTx.wait(1)).hash })
     
     // burn
-    // const { burnTx } = await burn({ secret, amount: burnAmount, contract: contractDeployerWallet })
-    // console.log({ burnAddress, burnTx: (await burnTx.wait(3)).hash }) // could wait less confirmation but
+    const { burnTx } = await burn({ secret, amount: burnAmount, contract: contractDeployerWallet })
+    console.log({ burnAddress, burnTx: (await burnTx.wait(3)).hash }) // could wait less confirmation but
 
     // get storage proof
     const blockNumber = BigInt(await provider.getBlockNumber("latest"))
@@ -257,7 +256,6 @@ async function main() {
         remintAddress: recipientWallet.address, 
         secret: secret, 
         provider: provider, 
-        deploymentBlock: DEPLOYMENT_BLOCK,
         maxHashPathSize: MAX_HASH_PATH_SIZE, 
         maxRlpSize: MAX_RLP_SIZE
     })

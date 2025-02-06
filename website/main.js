@@ -18,8 +18,7 @@ const noir = new Noir(circuit, backend)
 
 
 //TODO remane nullifierId -> nullifierKey and nullifier -> nullifierValue
-const DEPLOYMENT_BLOCK = 8109507n
-const CONTRACT_ADDRESS = "0x6563cfc28f56b112Db0e8d6BF420590E92631368"//"0xE182977B23296FFdBbcEeAd68dd76c3ea67f447F"
+const CONTRACT_ADDRESS = "0x6A0e54612253d97Fd2c3dbb73BDdBAFfca531A9B"//"0xE182977B23296FFdBbcEeAd68dd76c3ea67f447F"
 const FIELD_LIMIT = 21888242871839275222246405745257275088548364400416034343698204186575808495617n //using poseidon so we work with 254 bits instead of 256
 const MAX_HASH_PATH_SIZE = 32;//248;//30; //this is the max tree depth in scroll: https://docs.scroll.io/en/technology/sequencer/zktrie/#tree-construction
 const MAX_RLP_SIZE = 650
@@ -46,7 +45,6 @@ async function remintBtnHandler({ signerAddress, contract, secret, signer, remin
   
 
     const blockNumber = BigInt(await provider.getBlockNumber("latest"))
-    console.log({DEPLOYMENT_BLOCK})
     const proofInputs = await getProofInputs({
       contractAddress:contract.target,
       blockNumber,
@@ -54,7 +52,6 @@ async function remintBtnHandler({ signerAddress, contract, secret, signer, remin
       remintAddress:to, 
       secret:secret, 
       provider:provider, 
-      deploymentBlock: DEPLOYMENT_BLOCK,
       maxHashPathSize:MAX_HASH_PATH_SIZE, 
       maxRlpSize:MAX_RLP_SIZE
     })
@@ -237,8 +234,7 @@ async function makeRemintUi({ secret, burnBalance, burnAddress, txHash, from, co
   const li = document.createElement("li")
 
   // @optimisation cache the latest nonce and prevSpend amount so we dont need a full resync on every page load and spend
-  console.log({secret, tokenContract:contract, startBlock: DEPLOYMENT_BLOCK})
-  const { prevSpendAmount,txhashes } = await findLatestNonce({secret, tokenContract:contract, startBlock: DEPLOYMENT_BLOCK})
+  const { prevSpendAmount,txhashes } = await findLatestNonce({secret, tokenContract:contract})
   console.log({txhashes})
 
   if (burnBalance === prevSpendAmount) {

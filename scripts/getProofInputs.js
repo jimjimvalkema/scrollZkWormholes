@@ -19,7 +19,7 @@ const MAX_RLP_SIZE = 650//1000; //should be enough scroll mainnet wasn't going a
 const abi = [
     "function balanceOf(address) view returns (uint256)",
     "function partialNullifiers(bytes32) view returns (uint256)",
-    "function remintedAmounts(bytes32) view returns (uint256)",
+    "function reMintAmounts(bytes32) view returns (uint256)",
     "event Remint(bytes32 indexed nullifierKey, uint256 amount)"
 ];
 //import fs from "fs/promises";
@@ -101,15 +101,19 @@ export function hashBurnAddress({secret}) {
 }
 
 // TODO find better name since it get prevSpendAmount and nonce
-export async function findLatestNonce({secret, tokenContract, startBlock, noncesPerEventScan=20, chunkSizeEventScan=5000}) {
-    startBlock = Number(startBlock)
+// TODO rename   noncesPerEventScan=20, chunkSizeEventScan=9000
+export async function findLatestNonce({secret, tokenContract, startBlock, noncesPerEventScan=20, chunkSizeEventScan=9999}) {
+    const provider = tokenContract.runner.provider
+    startBlock = startBlock ? Number(startBlock) : (await provider.getBlockNumber("latest")) - 40000//80000
     //console.log(JSON.stringify(tokenContract))
     let usedNonce = 0n // TODO clean up this while loop so nonce starts at 0n. (for readability)
     let remintEvents = undefined;
     let prevSpendAmount = 0n 
     let txhashes = []
+    // do event scanning
     while (remintEvents !== false) {
         const nullifierKeys = Array(noncesPerEventScan).fill(0).map((x,i)=>hashNullifierKey({nonce:usedNonce+BigInt(i), secret}))
+        console.log({nullifierKeys})
         remintEvents = await getRemintEventBulk({chunksize:chunkSizeEventScan,nullifierKeys, startBlock, contract:tokenContract})
 
         if (remintEvents !== false) { //ugly
@@ -120,6 +124,19 @@ export async function findLatestNonce({secret, tokenContract, startBlock, nonces
             txhashes = txhashes.concat(remintEvents.map((event)=>event.transactionHash))
         }
     }
+    
+    let nullifierValue
+    while (nullifierValue !== "0x00") {
+        const nullifierKey = hashNullifierKey({nonce:usedNonce, secret})
+        nullifierValue = ethers.toBeHex(await tokenContract.partialNullifiers(nullifierKey))
+
+        if (nullifierValue !== "0x00") {
+            const remintedAmount = await tokenContract.reMintAmounts(nullifierKey)
+            prevSpendAmount += remintedAmount
+            usedNonce++
+        }
+    } 
+    console.log( {nonce: usedNonce, prevSpendAmount, txhashes})
     return {nonce: usedNonce, prevSpendAmount, txhashes}
 }
 
@@ -210,7 +227,7 @@ export async function getRemintProofData({contractAddress, burnAddress,withdrawA
     // contract data
     const tokenContract = new ethers.Contract(contractAddress, abi, provider)
     const burnedTokenBalance = await tokenContract.balanceOf(burnAddress)
-    const {nonce, prevSpendAmount} = await findLatestNonce({secret, tokenContract, startBlock:deploymentBlock})
+    const {nonce, prevSpendAmount} = await findLatestNonce({secret, tokenContract})
 
     // nullifiers
     const nullifierValue = hashNullifierValue({amount: prevSpendAmount + withdrawAmount,nonce,secret})
