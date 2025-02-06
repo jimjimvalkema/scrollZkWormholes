@@ -1,6 +1,6 @@
 {
-  "TokenModule#Token": "0x6563cfc28f56b112Db0e8d6BF420590E92631368",
-  "VerifiersModule#Token": "0x6563cfc28f56b112Db0e8d6BF420590E92631368",
-  "VerifiersModule#RemintVerifier": "0x4e93F3053E7C022d996c12F2048cBdcB392840F2",
-  "VerifiersModule#StorageRootVerifier": "0x80188479DFd4a4Afc1f3C6147779b542E020A667"
+  "TokenModule#Token": "0x6A0e54612253d97Fd2c3dbb73BDdBAFfca531A9B",
+  "VerifiersModule#Token": "0x6A0e54612253d97Fd2c3dbb73BDdBAFfca531A9B",
+  "VerifiersModule#RemintVerifier": "0xE536Df98cCba1d3835836D2AF0c99714f5e0B0ad",
+  "VerifiersModule#StorageRootVerifier": "0x33B13276Bc375F08e5AC149D1C16B502989e7f11"
 }

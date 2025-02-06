@@ -9,7 +9,7 @@ An erc20 token with [EIP7503](https://eips.ethereum.org/EIPS/eip-7503) (zkwormho
 ![ui](./screenshots/2burns1remintui.png)  
 
 ### deploymend on scroll sepolia
-https://sepolia.scrollscan.com/address/0x6563cfc28f56b112Db0e8d6BF420590E92631368
+https://sepolia.scrollscan.com/address/0x6A0e54612253d97Fd2c3dbb73BDdBAFfca531A9B
 
 ## WARNING WORK IN PROGRESS
 The code here in barely tested and has 3 inflation bugs.  
