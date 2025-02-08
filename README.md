@@ -1,5 +1,5 @@
 # An erc20 with EIP7503, partial spends and reusable address
-An erc20 token with [EIP7503](https://eips.ethereum.org/EIPS/eip-7503) (zkwormholes) style private transfers, and a new nullifier scheme to enable partial spends and reusable burnaddresses.  
+An erc20 token with [EIP7503](https://eips.ethereum.org/EIPS/eip-7503) (zkwormholes) style private transfers, and a new nullifier scheme to enable partial spends and reusable burn addresses.  
 *More info in [docs/notes.md](https://github.com/jimjimvalkema/scrollZkWormholes/blob/main/docs/notes.md#L1)*
 
 **Try it out here: https://scrollzkwormholes.jimjim.dev/**  
@@ -8,7 +8,7 @@ An erc20 token with [EIP7503](https://eips.ethereum.org/EIPS/eip-7503) (zkwormho
 
 ![ui](./screenshots/2burns1remintui.png)  
 
-### deploymend on scroll sepolia
+### deployment on scroll sepolia
 https://sepolia.scrollscan.com/address/0x6A0e54612253d97Fd2c3dbb73BDdBAFfca531A9B
 
 ## WARNING WORK IN PROGRESS

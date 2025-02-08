@@ -1,6 +1,6 @@
 ## What is ZKwormholes EIP-7503
 ZKwormholes *([EIP-7503](https://eips.ethereum.org/EIPS/eip-7503))* is a new method for *depositing* **from a public address into a private address** with **plausible deniability**.  
-It differs from conventinal methods because it doesn't reveal that an user made a deposit into a privacy protocol. Instead it looks like a "normal" transfer.      
+It differs from conventional methods because it doesn't reveal that an user made a deposit into a privacy protocol. Instead it looks like a "normal" transfer.      
 In contrast to protocols like zcash, tornadocash, etc, where it's publicly "announced" when a user with public money sends to a private address.  
 It works by sending ETH to an address that isn't generated "correctly" like other EOAs. *ex: `address=poseidonHash(secret)`.* 
 And then a zero knowledge proof is used to proof that the user knows **the secret** of **an address**, and is then allowed the **"re-mint" the account balance** of that account.
@@ -11,7 +11,7 @@ The code here in untested and has 3 bugs that cause an inflation bug:
 *https://github.com/jimjimvalkema/scrollZkWormholes/blob/main/contracts/Token.sol#L56*    
 2. Anyone can call the `mint` function  
 *https://github.com/jimjimvalkema/scrollZkWormholes/blob/main/contracts/Token.sol#L76*  
-3. The addresses are only 20 bytes which allows for a collision attack where an address can both be a EOA and a burn address. This is because zkwormholes inhererntly is incompatible with EIP-3607. However it is estimated the cost of attack is $50B.   
+3. The addresses are only 20 bytes which allows for a collision attack where an address can both be a EOA and a burn address. This is because zkwormholes inherently is incompatible with EIP-3607. However it is estimated the cost of attack is $50B.   
 *https://eips.ethereum.org/EIPS/eip-3607*
 
 ## Burn address
@@ -30,14 +30,14 @@ function hashBurnAddress(secret) {
 The original EIP suggested nullifying the entire address, which means that it becomes a **real burn address** after a re-mint and requires the user to remint the entire amount.   
 
 ### Account based nullifiers
-I instead created an account based nullifier scheme that allows the user to **reuse the address** and remint **any amount**. The nullifier doenst nullify the entire address, instead it **nullifies the totall amount spent**. This is done in a way that does **not link the remint txs** toghether and does **not reveal the totall amount spent**. 
+I instead created an account based nullifier scheme that allows the user to **reuse the address** and remint **any amount**. The nullifier does not nullify the entire address, instead it **nullifies the total amount spent**. This is done in a way that does **not link the remint txs** together and does **not reveal the total amount spent**. 
 
-The scheme is simply put a **Key/Value pair** linked to the burnaddress, whith the **account nonce as key** and **totall amount spent as value**. Except we do some hashing to hide what those key/values are.  
+The scheme is simply put a **Key/Value pair** linked to the burnaddress, whith the **account nonce as key** and **total amount spent as value**. Except we do some hashing to hide what those key/values are.  
 For the key we do `nullifierKey=poseidonHash(nonce,secret)` the secret here links the nullifierId to the burn address.  
-For the value we could do just hash the totallAmountSpent. But this would be silly easy to guess in a preimg attack. So we add the nonce + secret as salt: `nullifierValue=poseidonHash(TotallAmount,nonce,secret)`
+For the value we could do just hash the totalAmountSpent. But this would be silly easy to guess in a preimg attack. So we add the nonce + secret as salt: `nullifierValue=poseidonHash(TotalAmount,nonce,secret)`
 
 ### Syncing
-Syncing an account requires determining the latest nonce and totallAmountSpent. This is simple and fast since the `nullifierKey` is deterministic and links to the remints txs. So we only need to do hash the `nullifierKey` starting at `nonce=0` and itter up until we no longer see `nullifierKey` exist on chain. This is much faster than UTXO style privact where you need to try and decrypt every tx onchain!  
+Syncing an account requires determining the latest nonce and totalAmountSpent. This is simple and fast since the `nullifierKey` is deterministic and links to the remints txs. So we only need to do hash the `nullifierKey` starting at `nonce=0` and itter up until we no longer see `nullifierKey` exist on chain. This is much faster than UTXO style privacy where you need to try and decrypt every tx onchain!  
 *In pseudocode:*
 ```js
 while(true) {
@@ -49,7 +49,7 @@ while(true) {
 }
 ```
 ### Circuit
-The circuit checks that the nullfier is: `nullifierValue=poseidonHash(prevTotallAmount + remintAmount,nonce+1,secret)`. And then also checks the previous nullifier through a storage proof as secret input.  
+The circuit checks that the nullfier is: `nullifierValue=poseidonHash(prevTotalAmount + remintAmount,nonce+1,secret)`. And then also checks the previous nullifier through a storage proof as secret input.  
 *real circuit is slightly different: https://github.com/jimjimvalkema/scrollZkWormholes/blob/main/circuits/remintProver/src/main.nr#L125*
 
 
@@ -58,7 +58,7 @@ You can characterize the privacy achieved by zkwormhole accounts to **hide only 
 
 
 ## Why on scroll / Commitment tree
-Scroll is a zkrollup that uses a sparse binairy merkle tree with the poseidon hash function. Which is much faster to prove in zk circuit than ethereum MPT state tree which uses keccak. This allows me to use the storage tree as a commitment tree directly instead of building a poseidon merkle tree inside the contract *(which cost a lott of gass)*.  
+Scroll is a zkrollup that uses a sparse binary merkle tree with the poseidon hash function. Which is much faster to prove in zk circuit than ethereum MPT state tree which uses keccak. This allows me to use the storage tree as a commitment tree directly instead of building a poseidon merkle tree inside the contract *(which cost a lott of gas)*.  
 
 
 
