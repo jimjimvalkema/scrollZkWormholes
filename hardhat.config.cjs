@@ -11,7 +11,7 @@ module.exports = {
   // https://docs.scroll.io/en/developers/developer-quickstart/#hardhat
   networks: {
     scrollSepolia: {
-      url: "https://sepolia-rpc.scroll.io/" || "",
+      url: "https://scroll-sepolia-rpc.publicnode.com/" || "",
       accounts:
         [PRIVATE_KEY]
     },

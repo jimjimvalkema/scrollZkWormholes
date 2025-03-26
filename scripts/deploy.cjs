@@ -20,7 +20,7 @@ const CONTRACTS_ROOT = __dirname + "/../contracts"
 
 
 //TODO use hardhat vars
-const PROVIDERURL = "https://sepolia-rpc.scroll.io/"
+const PROVIDERURL = "https://scroll-sepolia-rpc.publicnode.com/"
 const provider = new ethers.JsonRpcProvider(PROVIDERURL)
 
 async function main() {

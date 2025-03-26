@@ -25,7 +25,7 @@ const MAX_RLP_SIZE = 650
 
 const CHAININFO = {
   chainId: "0x8274f",
-  rpcUrls: ["https://sepolia-rpc.scroll.io"],
+  rpcUrls: ["https://scroll-sepolia-rpc.publicnode.com"],
   chainName: "scroll sepolia",
   nativeCurrency: {
     name: "Ethereum",
