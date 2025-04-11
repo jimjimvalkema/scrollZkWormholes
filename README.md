@@ -3,10 +3,11 @@ An erc20 token with [EIP7503](https://eips.ethereum.org/EIPS/eip-7503) (zkwormho
 *More info in [docs/notes.md](https://github.com/jimjimvalkema/scrollZkWormholes/blob/main/docs/notes.md#L1)*
 
 **Try it out here: https://scrollzkwormholes.jimjim.dev/**  
+![ui](./screenshots/2burns1remintui.png)  
 <!-- TODO -> *Or on ipfs: https://bafybeia3aeuhou4jwtoakvds7ya5qxe5hwjqchmabvvvuwvd6thnqubgzm.ipfs.dweb.link/* -->
 
-
-![ui](./screenshots/2burns1remintui.png)  
+## deprecation notice
+Scroll is going to switch to a keccak based MPT state trie in the [euclid upgrade](https://x.com/shenhaichen/status/1910527255920730363). But this repo is build around the old state model.
 
 ### deployment on scroll sepolia
 https://sepolia.scrollscan.com/address/0x6A0e54612253d97Fd2c3dbb73BDdBAFfca531A9B
